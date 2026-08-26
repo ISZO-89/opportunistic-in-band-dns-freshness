@@ -1,0 +1,12 @@
+BROWSER_H3_SERVER_READY udp://0.0.0.0:4433
+QUIC_PROTOCOL_CREATED number=1
+PROTOCOL_NEGOTIATED protocol=1 alpn=h3
+QUIC_HANDSHAKE_COMPLETED protocol=1 total=1
+QUIC_PROTOCOL_CREATED number=2
+PROTOCOL_NEGOTIATED protocol=2 alpn=h3
+QUIC_HANDSHAKE_COMPLETED protocol=2 total=2
+BROWSER_REQUEST protocol=2 stream=0 path=/app/1 cursor=b':owABAVDybA4VCSEolSECEwROLOQ/AoA=:' cursor_raw_bytes=23 cursor_scopes=0 cursor_gen=none
+FRESHNESS_SNAPSHOT_ATTACHED protocol=2 stream=0 bytes=325
+BROWSER_REQUEST protocol=2 stream=4 path=/app/2 cursor=b':owABAVDybA4VCSEolSECEwROLOQ/AoGlAAEBUIy67blVeYBz/94qL2+FKEoCGGQDWCAIgcFVb6JJ8QaTpVxXR9FIwqiquu6NQR+/wBMPYBQLNQQZEAA=:' cursor_raw_bytes=86 cursor_scopes=1 cursor_gen=100
+FRESHNESS_DELTA_ATTACHED protocol=2 stream=4 bytes=273
+NATIVE_PRE_61_CONNECTION_CLOSE_SCHEDULED=PASS

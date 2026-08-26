@@ -1,0 +1,22 @@
+{
+  "protocol_version": 1,
+  "root_epoch": 1,
+  "service_id": "f26c0e1509212895210213044e2ce43f",
+  "scope_id": "8cbaedb955798073ffde2a2f6f85284a",
+  "admission_context": "native-fullstack-lab",
+  "key_id": "df64de1acce6be3d1a819987420b6dd9",
+  "generation_100": 100,
+  "endpoint_100": "172.18.0.61",
+  "digest_100": "0881c1556fa249f10693a55c5747d148c2a8aabaee8d411fbfc0130f60140b35",
+  "generation_101": 101,
+  "endpoint_101": "172.18.0.12",
+  "digest_101": "b83ae05c5ecebf78974aa9537d83ed03a0f915d4bd2fe5b8241d956afc9e04b6",
+  "issued_at": 1787636875,
+  "valid_until": 1787658475,
+  "canonical_state_100_bytes": 74,
+  "canonical_state_101_bytes": 74,
+  "snapshot_cose_bytes": 325,
+  "delta_cose_bytes": 273,
+  "snapshot_sha256": "fb788080d0e5cc01733975f8dadb8a4b0b535db0dd86e20a4932aaa625d12bd3",
+  "delta_sha256": "e48974556534e247e4fe5900b27a2d2e55f3e36d733c15e12404ffd0579e8fd5"
+}

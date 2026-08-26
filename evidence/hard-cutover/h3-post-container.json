@@ -1,0 +1,223 @@
+[
+    {
+        "Id": "d949f29ab40016be8e884445096cc2f5a5a1b19c879771a5f6c57e5851cbaee0",
+        "Created": "2026-08-25T05:24:41.484230426Z",
+        "Path": "python",
+        "Args": [
+            "/work/native_browser_server.py"
+        ],
+        "State": {
+            "Status": "running",
+            "Running": true,
+            "Paused": false,
+            "Restarting": false,
+            "OOMKilled": false,
+            "Dead": false,
+            "Pid": 9071,
+            "ExitCode": 0,
+            "Error": "",
+            "StartedAt": "2026-08-25T05:24:41.83574788Z",
+            "FinishedAt": "0001-01-01T00:00:00Z"
+        },
+        "Image": "sha256:2472d55eed53ab68f7d72340e9adf67728180193fb64ab87fad3458c8486e4d0",
+        "ResolvConfPath": "/var/lib/docker/containers/d949f29ab40016be8e884445096cc2f5a5a1b19c879771a5f6c57e5851cbaee0/resolv.conf",
+        "HostnamePath": "/var/lib/docker/containers/d949f29ab40016be8e884445096cc2f5a5a1b19c879771a5f6c57e5851cbaee0/hostname",
+        "HostsPath": "/var/lib/docker/containers/d949f29ab40016be8e884445096cc2f5a5a1b19c879771a5f6c57e5851cbaee0/hosts",
+        "LogPath": "/var/lib/docker/containers/d949f29ab40016be8e884445096cc2f5a5a1b19c879771a5f6c57e5851cbaee0/d949f29ab40016be8e884445096cc2f5a5a1b19c879771a5f6c57e5851cbaee0-json.log",
+        "Name": "/dns-fullstack-h3",
+        "RestartCount": 0,
+        "Driver": "overlayfs",
+        "Platform": "linux",
+        "MountLabel": "",
+        "ProcessLabel": "",
+        "AppArmorProfile": "docker-default",
+        "ExecIDs": null,
+        "HostConfig": {
+            "Binds": [
+                "/mnt/user/appdata/dns-service-sync-lab/benchmark/realworld-freshness:/work:ro",
+                "/mnt/user/appdata/dns-service-sync-lab/benchmark/gate18-http3/tls:/tls:ro"
+            ],
+            "ContainerIDFile": "",
+            "LogConfig": {
+                "Type": "json-file",
+                "Config": {}
+            },
+            "NetworkMode": "dns-service-sync-net",
+            "PortBindings": {},
+            "RestartPolicy": {
+                "Name": "no",
+                "MaximumRetryCount": 0
+            },
+            "AutoRemove": false,
+            "VolumeDriver": "",
+            "VolumesFrom": null,
+            "ConsoleSize": [
+                0,
+                0
+            ],
+            "CapAdd": null,
+            "CapDrop": null,
+            "CgroupnsMode": "private",
+            "Dns": null,
+            "DnsOptions": [],
+            "DnsSearch": [],
+            "ExtraHosts": null,
+            "GroupAdd": null,
+            "IpcMode": "private",
+            "Cgroup": "",
+            "Links": null,
+            "OomScoreAdj": 0,
+            "PidMode": "",
+            "Privileged": false,
+            "PublishAllPorts": false,
+            "ReadonlyRootfs": false,
+            "SecurityOpt": null,
+            "UTSMode": "",
+            "UsernsMode": "",
+            "ShmSize": 67108864,
+            "Runtime": "runc",
+            "Isolation": "",
+            "CpuShares": 0,
+            "Memory": 0,
+            "NanoCpus": 0,
+            "CgroupParent": "",
+            "BlkioWeight": 0,
+            "BlkioWeightDevice": [],
+            "BlkioDeviceReadBps": [],
+            "BlkioDeviceWriteBps": [],
+            "BlkioDeviceReadIOps": [],
+            "BlkioDeviceWriteIOps": [],
+            "CpuPeriod": 0,
+            "CpuQuota": 0,
+            "CpuRealtimePeriod": 0,
+            "CpuRealtimeRuntime": 0,
+            "CpusetCpus": "",
+            "CpusetMems": "",
+            "Devices": [],
+            "DeviceCgroupRules": null,
+            "DeviceRequests": null,
+            "MemoryReservation": 0,
+            "MemorySwap": 0,
+            "MemorySwappiness": null,
+            "OomKillDisable": null,
+            "PidsLimit": null,
+            "Ulimits": [],
+            "CpuCount": 0,
+            "CpuPercent": 0,
+            "IOMaximumIOps": 0,
+            "IOMaximumBandwidth": 0,
+            "MaskedPaths": [
+                "/proc/acpi",
+                "/proc/asound",
+                "/proc/interrupts",
+                "/proc/kcore",
+                "/proc/keys",
+                "/proc/latency_stats",
+                "/proc/sched_debug",
+                "/proc/scsi",
+                "/proc/timer_list",
+                "/proc/timer_stats",
+                "/sys/devices/virtual/powercap",
+                "/sys/firmware"
+            ],
+            "ReadonlyPaths": [
+                "/proc/bus",
+                "/proc/fs",
+                "/proc/irq",
+                "/proc/sys",
+                "/proc/sysrq-trigger"
+            ]
+        },
+        "Storage": {
+            "RootFS": {
+                "Snapshot": {
+                    "Name": "overlayfs"
+                }
+            }
+        },
+        "Mounts": [
+            {
+                "Type": "bind",
+                "Source": "/mnt/user/appdata/dns-service-sync-lab/benchmark/realworld-freshness",
+                "Destination": "/work",
+                "Mode": "ro",
+                "RW": false,
+                "Propagation": "rprivate"
+            },
+            {
+                "Type": "bind",
+                "Source": "/mnt/user/appdata/dns-service-sync-lab/benchmark/gate18-http3/tls",
+                "Destination": "/tls",
+                "Mode": "ro",
+                "RW": false,
+                "Propagation": "rprivate"
+            }
+        ],
+        "Config": {
+            "Hostname": "d949f29ab400",
+            "Domainname": "",
+            "User": "",
+            "AttachStdin": false,
+            "AttachStdout": false,
+            "AttachStderr": false,
+            "Tty": false,
+            "OpenStdin": false,
+            "StdinOnce": false,
+            "Env": [
+                "NATIVE_PHASE=post",
+                "PATH=/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                "LANG=C.UTF-8",
+                "GPG_KEY=7169605F62C751356D054A26A821E680E5FA6305",
+                "PYTHON_VERSION=3.12.14",
+                "PYTHON_SHA256=5c8462af5790baf43a321a1559dbe0db06d1be4300fb85fb53c40060668e548a"
+            ],
+            "Cmd": [
+                "python",
+                "/work/native_browser_server.py"
+            ],
+            "Image": "dns-service-sync-realworld-h3:lab",
+            "Volumes": null,
+            "WorkingDir": "/work",
+            "Entrypoint": null,
+            "Labels": {}
+        },
+        "NetworkSettings": {
+            "SandboxID": "425a1d7e709ec7759dc1b63a892f02b36941eb5b479a9b1456eb04937c629d99",
+            "SandboxKey": "/var/run/docker/netns/425a1d7e709e",
+            "Ports": {},
+            "Networks": {
+                "dns-service-sync-net": {
+                    "IPAMConfig": {
+                        "IPv4Address": "172.18.0.12"
+                    },
+                    "Links": null,
+                    "Aliases": null,
+                    "DriverOpts": null,
+                    "GwPriority": 0,
+                    "NetworkID": "f9adfa46ee0718571ad35c10a3aed4b0d39cc2ee38b422456b95c78920ed6de3",
+                    "EndpointID": "b1661f0b7be40cb8b1b3243297e2fb125b6825df3f7e98891c2098a65e89a2b0",
+                    "Gateway": "172.18.0.1",
+                    "IPAddress": "172.18.0.12",
+                    "MacAddress": "5e:82:8f:a4:a0:bb",
+                    "IPPrefixLen": 16,
+                    "IPv6Gateway": "",
+                    "GlobalIPv6Address": "",
+                    "GlobalIPv6PrefixLen": 0,
+                    "DNSNames": [
+                        "dns-fullstack-h3",
+                        "d949f29ab400"
+                    ]
+                }
+            }
+        },
+        "ImageManifestDescriptor": {
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "digest": "sha256:2cfd9cad2b847e5631ee153314ec852ce347bfda1937e87256e7405f3c5afff0",
+            "size": 1435,
+            "platform": {
+                "architecture": "amd64",
+                "os": "linux"
+            }
+        }
+    }
+]

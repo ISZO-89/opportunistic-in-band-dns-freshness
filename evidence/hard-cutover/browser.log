@@ -1,0 +1,106 @@
+LOCAL_STATE_DOH_MODE=secure
+LOCAL_STATE_DOH_TEMPLATE=https://172.18.0.55:8443/dns-query{?dns}
+2026-08-25T05:24:38.228Z pw:browser <launching> /native-chromium/chrome --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-edgeupdater --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,BlockOriginHeaderModificationOnRedirect,Translate,AutoDeElevate,OptimizationHints,msForceBrowserSignIn,msEdgeUpdateLaunchServicesPreferredVersion --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --disable-updater-scheduler --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --no-sandbox --enable-logging=stderr --log-level=0 --enable-quic --no-proxy-server --ignore-certificate-errors --disable-background-networking --disable-component-update --disable-default-apps --disable-sync --no-first-run --no-default-browser-check --origin-to-force-quic-on=a.service.test:4433 --ignore-certificate-errors-spki-list=NdxVLANqQ92KAB0XLPUtbP/X5h/SQXbJd46oMo8EBcs=,b20c5FWqendhxrtGyB/k65HeF/WGiVc1TeC+Zi+kJbY= --user-data-dir=/tmp/dnsfresh-zero-dns-profile --remote-debugging-pipe about:blank
+2026-08-25T05:24:38.231Z pw:browser <launched> pid=19
+2026-08-25T05:24:38.288Z pw:browser [pid=19][err] [19:33:0825/052438.288037:ERROR:dbus/bus.cc:405] Failed to connect to the bus: Failed to connect to socket /run/dbus/system_bus_socket: No such file or directory
+2026-08-25T05:24:38.289Z pw:browser [pid=19][err] [19:19:0825/052438.289592:ERROR:ui/base/cursor/cursor_factory.cc:97] Not implemented reached in virtual void ui::CursorFactory::ObserveThemeChanges(). 
+2026-08-25T05:24:38.293Z pw:browser [pid=19][err] [19:33:0825/052438.292750:ERROR:dbus/bus.cc:405] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+2026-08-25T05:24:38.293Z pw:browser [pid=19][err] [19:33:0825/052438.293450:ERROR:dbus/bus.cc:405] Failed to connect to the bus: Failed to connect to socket /run/dbus/system_bus_socket: No such file or directory
+2026-08-25T05:24:38.293Z pw:browser [pid=19][err] [19:33:0825/052438.293612:ERROR:dbus/bus.cc:405] Failed to connect to the bus: Failed to connect to socket /run/dbus/system_bus_socket: No such file or directory
+2026-08-25T05:24:38.293Z pw:browser [pid=19][err] [19:33:0825/052438.293632:ERROR:dbus/bus.cc:405] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+2026-08-25T05:24:38.313Z pw:browser [pid=19][err] WARN: SystemInfo_vulkan.cpp:198 (HasKhronosValidationLayer): Vulkan validation layers are missing
+2026-08-25T05:24:38.319Z pw:browser [pid=19][err] [47:47:0825/052438.319285:WARNING:media/gpu/vaapi/vaapi_wrapper.cc:1655] drmGetDevices2() has not found any devices
+2026-08-25T05:24:38.321Z pw:browser [pid=19][err] [47:47:0825/052438.321219:WARNING:sandbox/policy/linux/sandbox_linux.cc:405] InitializeSandbox() called with multiple threads in process gpu-process.
+2026-08-25T05:24:38.391Z pw:browser [pid=19][err] [19:19:0825/052438.391423:ERROR:chrome/browser/net/stub_resolver_config_reader.cc:345] DNSFRESH_DOH_PREF managed=0 mode='secure' templates='https://172.18.0.55:8443/dns-query{?dns}'
+2026-08-25T05:24:38.391Z pw:browser [pid=19][err] [19:19:0825/052438.391497:ERROR:chrome/browser/net/stub_resolver_config_reader.cc:450] DNSFRESH_DOH_EFFECTIVE mode=2 servers=1 update_network_service=1
+2026-08-25T05:24:38.413Z pw:browser [pid=19][err] [19:19:0825/052438.413483:WARNING:chrome/browser/signin/account_consistency_mode_manager.cc:74] Desktop Identity Consistency cannot be enabled as no OAuth client ID and client secret have been configured.
+2026-08-25T05:24:38.418Z pw:browser [pid=19][err] [19:33:0825/052438.418734:ERROR:dbus/bus.cc:405] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+2026-08-25T05:24:38.546Z pw:browser [pid=19][err] [19:19:0825/052438.546011:ERROR:components/power_monitor/power_monitor_device_source_linux.cc:51] Failed to connect to org.freedesktop.login1.Manager for signal PrepareForSleep
+2026-08-25T05:24:38.546Z pw:browser [pid=19][err] [19:19:0825/052438.546144:ERROR:dbus/object_proxy.cc:572] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+2026-08-25T05:24:38.546Z pw:browser [pid=19][err] [19:19:0825/052438.546199:WARNING:device/bluetooth/dbus/bluez_dbus_manager.cc:209] Floss manager service not available, cannot set Floss enable/disable.
+2026-08-25T05:24:38.546Z pw:browser [pid=19][err] [19:33:0825/052438.546215:ERROR:dbus/bus.cc:405] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+2026-08-25T05:24:38.546Z pw:browser [pid=19][err] [19:19:0825/052438.546260:ERROR:dbus/object_proxy.cc:572] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+2026-08-25T05:24:38.547Z pw:browser [pid=19][err] [19:33:0825/052438.546873:ERROR:dbus/bus.cc:405] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+2026-08-25T05:24:38.553Z pw:browser [pid=19][err] [19:19:0825/052438.552968:ERROR:dbus/object_proxy.cc:572] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+2026-08-25T05:24:38.561Z pw:browser [pid=19][err] [19:33:0825/052438.561103:ERROR:dbus/bus.cc:405] Failed to connect to the bus: Failed to connect to socket /run/dbus/system_bus_socket: No such file or directory
+2026-08-25T05:24:38.561Z pw:browser [pid=19][err] [19:33:0825/052438.561148:ERROR:dbus/bus.cc:405] Failed to connect to the bus: Failed to connect to socket /run/dbus/system_bus_socket: No such file or directory
+2026-08-25T05:24:38.561Z pw:browser [pid=19][err] [19:19:0825/052438.561155:ERROR:dbus/object_proxy.cc:572] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+2026-08-25T05:24:38.561Z pw:browser [pid=19][err] [19:19:0825/052438.561483:ERROR:dbus/object_proxy.cc:572] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+2026-08-25T05:24:38.561Z pw:browser [pid=19][err] [19:33:0825/052438.561544:ERROR:dbus/bus.cc:405] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+2026-08-25T05:24:38.571Z pw:browser [pid=19][err] [19:19:0825/052438.571450:WARNING:dbus/property.cc:94] Failed to connect to PropertiesChangedsignal.
+2026-08-25T05:24:38.571Z pw:browser [pid=19][err] [19:19:0825/052438.571478:ERROR:dbus/object_proxy.cc:572] Failed to call method: org.freedesktop.DBus.Properties.GetAll: object_path= /org/freedesktop/UPower/devices/DisplayDevice: unknown error type: 
+2026-08-25T05:24:38.571Z pw:browser [pid=19][err] [19:19:0825/052438.571484:WARNING:dbus/property.cc:174] GetAll request failed for: org.freedesktop.UPower.Device
+2026-08-25T05:24:38.571Z pw:browser [pid=19][err] [19:19:0825/052438.571885:ERROR:dbus/object_proxy.cc:572] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+2026-08-25T05:24:38.571Z pw:browser [pid=19][err] [19:33:0825/052438.571960:ERROR:dbus/bus.cc:405] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+2026-08-25T05:24:38.572Z pw:browser [pid=19][err] [65:70:0825/052438.572533:ERROR:net/dns/host_resolver_dns_task.cc:585] DNS_FRESHNESS_NATIVE DNSSEC_GATE host=www.google.com type=7 is_https=1 mode=2 secure=1 ad=0 authenticated=0 flags=33152
+2026-08-25T05:24:38.576Z pw:browser [pid=19][err] [19:19:0825/052438.576129:ERROR:dbus/object_proxy.cc:572] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+2026-08-25T05:24:38.576Z pw:browser [pid=19][err] [19:33:0825/052438.576197:ERROR:dbus/bus.cc:405] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+2026-08-25T05:24:38.582Z pw:browser [pid=19][err] [19:19:0825/052438.582095:ERROR:dbus/object_proxy.cc:572] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+2026-08-25T05:24:38.582Z pw:browser [pid=19][err] [19:19:0825/052438.582105:WARNING:ui/base/idle/idle_linux.cc:111] None of the known D-Bus ScreenSaver services could be used.
+BROWSER_ENGINE=Chromium
+=== REQUEST 1 / SNAPSHOT ===
+2026-08-25T05:24:38.595Z pw:browser [pid=19][err] [65:70:0825/052438.594761:ERROR:net/dns/host_resolver_dns_task.cc:585] DNS_FRESHNESS_NATIVE DNSSEC_GATE host=a.service.test type=7 is_https=1 mode=2 secure=1 ad=1 authenticated=1 flags=33184
+2026-08-25T05:24:38.595Z pw:browser [pid=19][err] [65:70:0825/052438.594957:ERROR:net/dns/host_resolver_dns_task.cc:585] DNS_FRESHNESS_NATIVE DNSSEC_GATE host=a.service.test type=1 is_https=0 mode=2 secure=1 ad=0 authenticated=0 flags=33152
+2026-08-25T05:24:38.595Z pw:browser [pid=19][err] [65:70:0825/052438.595080:ERROR:services/network/network_service_network_delegate.cc:255] DNS_FRESHNESS_NATIVE METADATA_BRIDGE HOST=a.service.test COUNT=1
+2026-08-25T05:24:38.595Z pw:browser [pid=19][err] [65:70:0825/052438.595115:ERROR:services/network/freshness/freshness_processor.cc:1122] DNS_FRESHNESS_NATIVE DISCOVERY_BOOTSTRAP=PASS HOST=a.service.test ROOT_EPOCH=1
+2026-08-25T05:24:38.596Z pw:browser [pid=19][err] [65:70:0825/052438.596208:ERROR:net/dns/host_resolver_dns_task.cc:585] DNS_FRESHNESS_NATIVE DNSSEC_GATE host=www.google.com type=1 is_https=0 mode=2 secure=1 ad=0 authenticated=0 flags=33152
+2026-08-25T05:24:38.597Z pw:browser [pid=19][err] [65:70:0825/052438.597046:ERROR:services/network/network_service_network_delegate.cc:255] DNS_FRESHNESS_NATIVE METADATA_BRIDGE HOST=www.google.com COUNT=1
+2026-08-25T05:24:38.641Z pw:browser [pid=19][err] [65:70:0825/052438.641758:ERROR:net/dns/host_resolver_dns_task.cc:585] DNS_FRESHNESS_NATIVE DNSSEC_GATE host=clients2.google.com type=1 is_https=0 mode=2 secure=1 ad=0 authenticated=0 flags=33152
+2026-08-25T05:24:38.950Z pw:browser [pid=19][err] [65:70:0825/052438.949919:ERROR:services/network/network_service_network_delegate.cc:255] DNS_FRESHNESS_NATIVE METADATA_BRIDGE HOST=a.service.test COUNT=1
+2026-08-25T05:24:38.950Z pw:browser [pid=19][err] [65:70:0825/052438.949948:ERROR:services/network/freshness/freshness_processor.cc:1122] DNS_FRESHNESS_NATIVE DISCOVERY_BOOTSTRAP=PASS HOST=a.service.test ROOT_EPOCH=1
+2026-08-25T05:24:38.953Z pw:browser [pid=19][err] [65:70:0825/052438.953560:ERROR:services/network/network_service_network_delegate.cc:183] DNS_FRESHNESS_NATIVE CURSOR_WIRE=PASS HOST=a.service.test BYTES=34
+2026-08-25T05:24:38.955Z pw:browser [pid=19][err] [65:70:0825/052438.954972:ERROR:services/network/freshness/freshness_processor.cc:538] DNS_FRESHNESS_NATIVE COSE_SIGNATURE=PASS TRUST=DNSSEC_ROOT
+2026-08-25T05:24:38.955Z pw:browser [pid=19][err] [65:70:0825/052438.955010:ERROR:services/network/freshness/freshness_processor.cc:753] DNS_FRESHNESS_NATIVE SNAPSHOT_ADMITTED=PASS GEN=100 ENDPOINT=172.18.0.61 ROOT_EPOCH=1
+2026-08-25T05:24:38.955Z pw:browser [pid=19][err] [65:70:0825/052438.955582:ERROR:services/network/network_service_network_delegate.cc:255] DNS_FRESHNESS_NATIVE METADATA_BRIDGE HOST=a.service.test COUNT=1
+2026-08-25T05:24:38.955Z pw:browser [pid=19][err] [65:70:0825/052438.955602:ERROR:services/network/freshness/freshness_processor.cc:1122] DNS_FRESHNESS_NATIVE DISCOVERY_BOOTSTRAP=PASS HOST=a.service.test ROOT_EPOCH=1
+2026-08-25T05:24:38.955Z pw:browser [pid=19][err] [65:70:0825/052438.955627:ERROR:services/network/network_service_network_delegate.cc:255] DNS_FRESHNESS_NATIVE METADATA_BRIDGE HOST=a.service.test COUNT=1
+2026-08-25T05:24:38.955Z pw:browser [pid=19][err] [65:70:0825/052438.955637:ERROR:services/network/freshness/freshness_processor.cc:1122] DNS_FRESHNESS_NATIVE DISCOVERY_BOOTSTRAP=PASS HOST=a.service.test ROOT_EPOCH=1
+REQUEST1_STATUS=200
+REQUEST1_MS=387.841
+BROWSER_WAIT_AFTER_REQUEST1=PASS
+2026-08-25T05:24:38.990Z pw:browser [pid=19][err] [65:70:0825/052438.989979:ERROR:services/network/network_service_network_delegate.cc:255] DNS_FRESHNESS_NATIVE METADATA_BRIDGE HOST=www.google.com COUNT=1
+2026-08-25T05:24:38.990Z pw:browser [pid=19][err] [65:70:0825/052438.990007:ERROR:services/network/network_service_network_delegate.cc:255] DNS_FRESHNESS_NATIVE METADATA_BRIDGE HOST=www.google.com COUNT=1
+2026-08-25T05:24:38.990Z pw:browser [pid=19][err] [65:70:0825/052438.990347:ERROR:net/dns/host_resolver_dns_task.cc:585] DNS_FRESHNESS_NATIVE DNSSEC_GATE host=accounts.google.com type=1 is_https=0 mode=2 secure=1 ad=0 authenticated=0 flags=33152
+2026-08-25T05:24:38.995Z pw:browser [pid=19][err] [65:70:0825/052438.995553:ERROR:net/dns/host_resolver_dns_task.cc:585] DNS_FRESHNESS_NATIVE DNSSEC_GATE host=accounts.google.com type=7 is_https=1 mode=2 secure=1 ad=0 authenticated=0 flags=33152
+CONTROL_REQUEST2_RELEASED=PASS
+=== REQUEST 2 / DELTA ===
+2026-08-25T05:24:39.084Z pw:browser [pid=19][err] [65:70:0825/052439.084662:ERROR:services/network/network_service_network_delegate.cc:183] DNS_FRESHNESS_NATIVE CURSOR_WIRE=PASS HOST=a.service.test BYTES=118
+2026-08-25T05:24:39.085Z pw:browser [pid=19][err] [65:70:0825/052439.085861:ERROR:services/network/freshness/freshness_processor.cc:538] DNS_FRESHNESS_NATIVE COSE_SIGNATURE=PASS TRUST=DNSSEC_ROOT
+2026-08-25T05:24:39.085Z pw:browser [pid=19][err] [65:70:0825/052439.085879:ERROR:services/network/freshness/freshness_processor.cc:828] DNS_FRESHNESS_NATIVE FROM_GENERATION_DIGEST=PASS GEN=100
+2026-08-25T05:24:39.085Z pw:browser [pid=19][err] [65:70:0825/052439.085886:ERROR:services/network/freshness/freshness_processor.cc:919] DNS_FRESHNESS_NATIVE REPLACE_RRSET=PASS
+2026-08-25T05:24:39.086Z pw:browser [pid=19][err] [65:70:0825/052439.085889:ERROR:services/network/freshness/freshness_processor.cc:921] DNS_FRESHNESS_NATIVE TO_DIGEST=PASS
+2026-08-25T05:24:39.086Z pw:browser [pid=19][err] [65:70:0825/052439.085898:ERROR:services/network/freshness/freshness_processor.cc:997] DNS_FRESHNESS_NATIVE COMMIT=PASS GEN=101 ENDPOINT=172.18.0.12 ROOT_EPOCH=1
+2026-08-25T05:24:39.086Z pw:browser [pid=19][err] [65:70:0825/052439.086283:ERROR:services/network/network_service_network_delegate.cc:255] DNS_FRESHNESS_NATIVE METADATA_BRIDGE HOST=a.service.test COUNT=1
+2026-08-25T05:24:39.086Z pw:browser [pid=19][err] [65:70:0825/052439.086300:ERROR:services/network/freshness/freshness_processor.cc:1122] DNS_FRESHNESS_NATIVE DISCOVERY_BOOTSTRAP=PASS HOST=a.service.test ROOT_EPOCH=1
+2026-08-25T05:24:39.086Z pw:browser [pid=19][err] [65:70:0825/052439.086317:ERROR:services/network/network_service_network_delegate.cc:255] DNS_FRESHNESS_NATIVE METADATA_BRIDGE HOST=a.service.test COUNT=1
+2026-08-25T05:24:39.086Z pw:browser [pid=19][err] [65:70:0825/052439.086324:ERROR:services/network/freshness/freshness_processor.cc:1122] DNS_FRESHNESS_NATIVE DISCOVERY_BOOTSTRAP=PASS HOST=a.service.test ROOT_EPOCH=1
+REQUEST2_STATUS=200
+REQUEST2_MS=32.074
+BROWSER_WAIT_AFTER_REQUEST2=PASS
+2026-08-25T05:24:41.930Z pw:browser [pid=19][err] [65:70:0825/052441.930837:ERROR:net/dns/host_resolver_dns_task.cc:585] DNS_FRESHNESS_NATIVE DNSSEC_GATE host=android.clients.google.com type=1 is_https=0 mode=2 secure=1 ad=0 authenticated=0 flags=33152
+2026-08-25T05:24:41.937Z pw:browser [pid=19][err] [65:70:0825/052441.937320:ERROR:net/dns/host_resolver_dns_task.cc:585] DNS_FRESHNESS_NATIVE DNSSEC_GATE host=android.clients.google.com type=7 is_https=1 mode=2 secure=1 ad=0 authenticated=0 flags=33152
+2026-08-25T05:24:42.118Z pw:browser [pid=19][err] [65:70:0825/052442.118598:ERROR:net/dns/host_resolver_dns_task.cc:585] DNS_FRESHNESS_NATIVE DNSSEC_GATE host=mtalk.google.com type=1 is_https=0 mode=2 secure=1 ad=0 authenticated=0 flags=33152
+2026-08-25T05:24:42.145Z pw:browser [pid=19][err] [19:34:0825/052442.145817:ERROR:google_apis/gcm/engine/registration_request.cc:291] Registration response error message: PHONE_REGISTRATION_ERROR
+2026-08-25T05:24:42.146Z pw:browser [pid=19][err] [19:34:0825/052442.146441:ERROR:google_apis/gcm/engine/registration_request.cc:291] Registration response error message: PHONE_REGISTRATION_ERROR
+2026-08-25T05:24:42.147Z pw:browser [pid=19][err] [19:34:0825/052442.147764:ERROR:google_apis/gcm/engine/registration_request.cc:291] Registration response error message: PHONE_REGISTRATION_ERROR
+CONTROL_REQUEST3_RELEASED=PASS
+=== REQUEST 3 / HARD CUTOVER ===
+2026-08-25T05:24:42.426Z pw:browser [pid=19][err] [65:70:0825/052442.426294:ERROR:services/network/network_service_network_delegate.cc:255] DNS_FRESHNESS_NATIVE METADATA_BRIDGE HOST=a.service.test COUNT=1
+2026-08-25T05:24:42.426Z pw:browser [pid=19][err] [65:70:0825/052442.426329:ERROR:services/network/freshness/freshness_processor.cc:1122] DNS_FRESHNESS_NATIVE DISCOVERY_BOOTSTRAP=PASS HOST=a.service.test ROOT_EPOCH=1
+2026-08-25T05:24:42.436Z pw:browser [pid=19][err] [65:70:0825/052442.436237:ERROR:services/network/network_service_network_delegate.cc:183] DNS_FRESHNESS_NATIVE CURSOR_WIRE=PASS HOST=a.service.test BYTES=118
+2026-08-25T05:24:42.437Z pw:browser [pid=19][err] [65:70:0825/052442.437733:ERROR:services/network/network_service_network_delegate.cc:255] DNS_FRESHNESS_NATIVE METADATA_BRIDGE HOST=a.service.test COUNT=1
+2026-08-25T05:24:42.437Z pw:browser [pid=19][err] [65:70:0825/052442.437751:ERROR:services/network/freshness/freshness_processor.cc:1122] DNS_FRESHNESS_NATIVE DISCOVERY_BOOTSTRAP=PASS HOST=a.service.test ROOT_EPOCH=1
+2026-08-25T05:24:42.437Z pw:browser [pid=19][err] [65:70:0825/052442.437767:ERROR:services/network/network_service_network_delegate.cc:255] DNS_FRESHNESS_NATIVE METADATA_BRIDGE HOST=a.service.test COUNT=1
+2026-08-25T05:24:42.437Z pw:browser [pid=19][err] [65:70:0825/052442.437775:ERROR:services/network/freshness/freshness_processor.cc:1122] DNS_FRESHNESS_NATIVE DISCOVERY_BOOTSTRAP=PASS HOST=a.service.test ROOT_EPOCH=1
+REQUEST3_STATUS=200
+REQUEST3_MS=33.738
+BROWSER_ZERO_DNS_SEQUENCE=PASS
+2026-08-25T05:24:42.459Z pw:browser [pid=19] <gracefully close start>
+2026-08-25T05:24:42.619Z pw:browser [pid=19][err] [65:73:0825/052442.619806:WARNING:net/extras/sqlite/sqlite_persistent_store_backend_base.cc:181] Failed to post task from FlushAndNotifyInBackground@net/extras/sqlite/sqlite_persistent_store_backend_base.cc:231 to client_task_runner_.
+2026-08-25T05:24:42.620Z pw:browser [pid=19][err] [65:73:0825/052442.619855:WARNING:net/extras/sqlite/sqlite_persistent_store_backend_base.cc:181] Failed to post task from FlushAndNotifyInBackground@net/extras/sqlite/sqlite_persistent_store_backend_base.cc:231 to client_task_runner_.
+2026-08-25T05:24:42.626Z pw:browser [pid=19][err] [19:19:0825/052442.626687:ERROR:base/process/kill_posix.cc:33] waitpid(65): No child processes (10)
+2026-08-25T05:24:42.627Z pw:browser [pid=19][err] [19:34:0825/052442.627877:WARNING:components/discardable_memory/service/discardable_shared_memory_manager.cc:458] Some MojoDiscardableSharedMemoryManagerImpls are still alive. They will be leaked.
+2026-08-25T05:24:42.647Z pw:browser [pid=19] <process did exit: exitCode=0, signal=null>
+2026-08-25T05:24:42.647Z pw:browser [pid=19] starting temporary directories cleanup
+2026-08-25T05:24:42.647Z pw:browser [pid=19] finished temporary directories cleanup
+2026-08-25T05:24:42.647Z pw:browser [pid=19] <gracefully close end>

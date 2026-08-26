@@ -1,0 +1,5 @@
+service.test:53 {
+    file /config/db.service.test service.test
+    errors
+    log
+}

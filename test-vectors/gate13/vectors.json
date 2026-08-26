@@ -1,0 +1,15 @@
+{
+  "algorithm": "Ed25519",
+  "checkpoint_cose_bytes": 204,
+  "checkpoint_cose_sha256": "6d7fd17b85c798242044cce0aa0938163954adbd7a0ff396dd7905f7003ef45d",
+  "checkpoint_payload_bytes": 111,
+  "checkpoint_payload_sha256": "a1076281d2401b62006ca6f4530db4d1a9897052664c6ebd2afe87c867e0c5d7",
+  "cose_algorithm_id": -19,
+  "delta_cose_bytes": 266,
+  "delta_cose_sha256": "94f0882665abfa18913323a6776629f5087fee73710846273cee72e50b1cb92c",
+  "delta_payload_bytes": 173,
+  "delta_payload_sha256": "8b1d7d96c965bb639c9e2aeb4287c34a855ede8f1f8cf4426ad9a68b9248333a",
+  "dns_state_sha256": "f3002e692ba244c7c5e74526ecbcd2b9e15d06346730d8d23ee6436ec7027728",
+  "structured_field_checkpoint_value_bytes": 274,
+  "structured_field_delta_value_bytes": 358
+}

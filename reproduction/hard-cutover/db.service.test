@@ -1,0 +1,101 @@
+; File written on Mon Aug 24 14:43:58 2026
+; dnssec_signzone version 9.18.39-0ubuntu0.24.04.6-Ubuntu
+service.test.		60	IN SOA	ns.service.test. hostmaster.service.test. (
+					1787582638 ; serial
+					60         ; refresh (1 minute)
+					60         ; retry (1 minute)
+					60         ; expire (1 minute)
+					60         ; minimum (1 minute)
+					)
+			60	RRSIG	SOA 15 2 60 (
+					20260923134358 20260824134358 54043 service.test.
+					SPe1WcnfaoFMiPRLNOGgBFkVibERGppLGwyC
+					52mpmuC3ftl+j2tRQE7+BPU/hscjN0u0WmN8
+					MFK313SJFcoGDw== )
+			60	NS	ns.service.test.
+			60	RRSIG	NS 15 2 60 (
+					20260923134358 20260824134358 54043 service.test.
+					obix74dfNFJNTEbf68nos7Ehzq00ztO1+UFR
+					7GIcv4wYh9b+u4E84rtytuMq9k/nRbjkMi8d
+					8mu3d3oN/SDaCw== )
+			60	NSEC	a.service.test. NS SOA RRSIG NSEC DNSKEY
+			60	RRSIG	NSEC 15 2 60 (
+					20260923134358 20260824134358 54043 service.test.
+					OWXawdmDlVEd76t6lTXTstn2L1EVRD5crAT3
+					JgTqE2HaKwhpYIM+zfd9arLwSGcQyWhSrs+b
+					mAq3K046KkEqBQ== )
+			60	DNSKEY	257 3 15 (
+					MUOjGv2wgHK0AOYydznp/iUx4puMJiLuMse6
+					s+9l7Vs=
+					) ; KSK; alg = ED25519 ; key id = 54043
+			60	RRSIG	DNSKEY 15 2 60 (
+					20260923134358 20260824134358 54043 service.test.
+					pn42mxx2wIcDgXwVDoQRq679MubwhSnFgtH2
+					rZRuSkB6sdZuz4YKpmcnVGRhEcSsI4xzNrV3
+					CYnYQYxm+EuSAg== )
+_4433._https.a.service.test. 60	IN NSEC	b.service.test. RRSIG NSEC HTTPS
+			60	RRSIG	NSEC 15 5 60 (
+					20260923134358 20260824134358 54043 service.test.
+					YX9ZXbjyzJj+WY4MaD8M6K0pEUqSXxRyt5Ks
+					8RjMcSYeGKOAV/sUcgYP7NMBXrRe8JHnXu9b
+					22EX7BmNtuJoBg== )
+			60	HTTPS	1 a.service.test. key65400="\167\000\001\001P\242l\014\021\009!(\149!\002\019\004N,\228?\002Tnative-fullstack-lab\003\001\004X T\018\226x\161\243\005\186q\009\141 a3^!8P\253\224\132\197\144!\026{/O\019~\142\002\005\026j\149}\190\006\000"
+			60	RRSIG	HTTPS 15 5 60 (
+					20260923134358 20260824134358 54043 service.test.
+					GElSzAz+3Jdme7L//zx8RFGXWNifKCaLI+ED
+					XDD3cO+MxJ4i/+28PY0u223zjTdD0qX4IyH/
+					hy4uH5qmQw1MCw== )
+b.service.test.		60	IN A	172.18.0.12
+			60	RRSIG	A 15 3 60 (
+					20260923134358 20260824134358 54043 service.test.
+					gY0Ks0+5IJtoCEvGxxJFoPcSyEcfhu6sdFcC
+					OlUOMf94wmFdlIvrp9m6KSz0cgjgQDRmaEkv
+					IywkkGCkpPVDBg== )
+			60	NSEC	c.service.test. A RRSIG NSEC
+			60	RRSIG	NSEC 15 3 60 (
+					20260923134358 20260824134358 54043 service.test.
+					k6F39OH/Vu+luOLvpRMrdWgCZXLMFTvf3sM/
+					UKSnbAWmdpKwCXtAPz5pJs+IXe8wZXhy/lQ3
+					mboSq/HdwoInCQ== )
+c.service.test.		60	IN A	172.18.0.13
+			60	RRSIG	A 15 3 60 (
+					20260923134358 20260824134358 54043 service.test.
+					fQ6xRrmXvZx6ebmJb+4tUBzFoUjih2ZDb/LA
+					wo8+Kfcx3qDaDc7waUP9UTjjGyQmjZl1+Gbh
+					379OUFLeJlBTBg== )
+			60	NSEC	ns.service.test. A RRSIG NSEC
+			60	RRSIG	NSEC 15 3 60 (
+					20260923134358 20260824134358 54043 service.test.
+					B3I6ridbdOuYOLq+RNjr9cUE1z9//S9zX6ud
+					KSEv2gJs5oNYe4HKp5d+a8IvSEk9w4k5VJsy
+					XHSHqApstF/RDw== )
+ns.service.test.	60	IN A	172.18.0.54
+			60	RRSIG	A 15 3 60 (
+					20260923134358 20260824134358 54043 service.test.
+					v8xpchOp41klWBdCqLUKxlR7DH30T/ZbZ0sI
+					12UClCQrnGM1b9PNTmloWDZmABZSSJTevZ4o
+					sIKbFo6sY8HoAA== )
+			60	NSEC	service.test. A RRSIG NSEC
+			60	RRSIG	NSEC 15 3 60 (
+					20260923134358 20260824134358 54043 service.test.
+					l/o4Da8T90X/wOV6iOxobnky/ig8HPEIeaqA
+					4W9kiRXMsAw2eaiC10+pqlUMMb8vdcpRsCHk
+					r3UNbOwa7gO3Dg== )
+a.service.test.		60	IN A	172.18.0.61
+			60	RRSIG	A 15 3 60 (
+					20260923134358 20260824134358 54043 service.test.
+					83UrSRvKCcsnHN3saxGyIzoARMjb9mtW2fkC
+					Q8xLSoS8XEBCicDruU9pDH60oGB3PLMlf9y1
+					/AKjNS69AtYmDg== )
+			60	NSEC	_4433._https.a.service.test. A RRSIG NSEC HTTPS
+			60	RRSIG	NSEC 15 3 60 (
+					20260923134358 20260824134358 54043 service.test.
+					3l/4WqO1GLXq5VarWJCpOwgV2h7dK8HAx+Cb
+					broE4INCvAYL7Kw2mGwxqBiF8DoO1p/WNoEd
+					bIWLqlS3ky+5Dw== )
+			60	HTTPS	1 . key65400="\167\000\001\001P\242l\014\021\009!(\149!\002\019\004N,\228?\002Tnative-fullstack-lab\003\001\004X T\018\226x\161\243\005\186q\009\141 a3^!8P\253\224\132\197\144!\026{/O\019~\142\002\005\026j\149}\190\006\000"
+			60	RRSIG	HTTPS 15 3 60 (
+					20260923134358 20260824134358 54043 service.test.
+					mbBA8w9FtxYfYhkVtICSW/vSqcZCqRZnpdrL
+					1/Yn/+DEzWPd6KlOXtur27jqXl/XdKnMcFle
+					PCPMLIhU3O7rCA== )

@@ -1,0 +1,9 @@
+reading from file /mnt/user/appdata/dns-service-sync-lab/benchmark/results/browser-wire-delta-nochange/20260825T054759Z/nochange.pcap, link-type LINUX_SLL2 (Linux cooked v2), snapshot length 262144
+Warning: interface names might be incorrect
+05:48:08.244437 enp1s0 In  IP 172.18.0.2.50625 > 172.18.0.61.4433: UDP, length 180
+05:48:08.245208 enp1s0 Out IP 172.18.0.61.4433 > 172.18.0.2.50625: UDP, length 131
+05:48:08.246491 enp1s0 Out IP 172.18.0.61.4433 > 172.18.0.2.50625: UDP, length 25
+05:48:08.270809 enp1s0 In  IP 172.18.0.2.50625 > 172.18.0.61.4433: UDP, length 36
+05:48:08.272301 enp1s0 Out IP 172.18.0.61.4433 > 172.18.0.2.50625: UDP, length 25
+05:48:08.319850 enp1s0 In  IP 172.18.0.2.50625 > 172.18.0.61.4433: UDP, length 48
+05:48:08.319986 enp1s0 In  IP 172.18.0.2.48156 > 172.18.0.61.4433: UDP, length 50

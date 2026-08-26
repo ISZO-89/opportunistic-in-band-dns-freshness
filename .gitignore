@@ -1,0 +1,27 @@
+# Local build / editor artifacts
+.DS_Store
+Thumbs.db
+*.swp
+*.tmp
+__pycache__/
+
+# Never commit local secrets or private keys by default
+*.key
+*.pem
+*.p12
+*.pfx
+.env
+.env.*
+
+# Frozen public trust anchor is intentionally evidence, not a private key
+!evidence/hard-cutover/fullstack-trust-anchor.key
+
+# Local captures are ignored by default; frozen evidence captures are intentional
+*.pcap
+*.pcapng
+!evidence/**/*.pcap
+!evidence/**/*.pcapng
+
+# Build outputs
+out/
+build/

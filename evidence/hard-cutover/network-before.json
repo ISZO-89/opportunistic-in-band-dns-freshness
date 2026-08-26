@@ -1,0 +1,63 @@
+[
+    {
+        "Name": "dns-service-sync-net",
+        "Id": "f9adfa46ee0718571ad35c10a3aed4b0d39cc2ee38b422456b95c78920ed6de3",
+        "Created": "2026-08-23T08:13:52.239285193Z",
+        "Scope": "local",
+        "Driver": "bridge",
+        "EnableIPv4": true,
+        "EnableIPv6": false,
+        "IPAM": {
+            "Driver": "default",
+            "Options": {},
+            "Config": [
+                {
+                    "Subnet": "172.18.0.0/16",
+                    "Gateway": "172.18.0.1"
+                }
+            ]
+        },
+        "Internal": false,
+        "Attachable": false,
+        "Ingress": false,
+        "ConfigFrom": {
+            "Network": ""
+        },
+        "ConfigOnly": false,
+        "Options": {},
+        "Labels": {},
+        "Containers": {
+            "5abdd5271a5f56a8da6fdf2e41c760b36ba106fa855593e4b9d0caa095cef697": {
+                "Name": "dns-fullstack-doh",
+                "EndpointID": "403a8f5251727df74c700201b7f698b845d593e65c22a5e2ea631dbb3e7965c0",
+                "MacAddress": "32:8f:b0:dd:e6:9b",
+                "IPv4Address": "172.18.0.55/16",
+                "IPv6Address": ""
+            },
+            "85f2546e1485dd3df687edd1899f2e98f4218136c1b3d7f886d7319e02247697": {
+                "Name": "dns-fullstack-h3",
+                "EndpointID": "8b2156ba8499915afd189859ea6ab51a4d082ae5b44dd9975880f7e5e06c738c",
+                "MacAddress": "fe:ac:25:3a:f0:7e",
+                "IPv4Address": "172.18.0.61/16",
+                "IPv6Address": ""
+            },
+            "c59108ae580de0271dc3fa447b11c9aa190fbe21c355a2d9a3732fba57f517bb": {
+                "Name": "dns-fullstack-auth",
+                "EndpointID": "7182b8a82415390622ebea77caeda3a1a79640db6919f03bf19c795c9952ad92",
+                "MacAddress": "0a:3b:ab:18:a0:42",
+                "IPv4Address": "172.18.0.54/16",
+                "IPv6Address": ""
+            }
+        },
+        "Status": {
+            "IPAM": {
+                "Subnets": {
+                    "172.18.0.0/16": {
+                        "IPsInUse": 6,
+                        "DynamicIPsAvailable": 65530
+                    }
+                }
+            }
+        }
+    }
+]

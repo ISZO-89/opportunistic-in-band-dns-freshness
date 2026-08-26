@@ -1,0 +1,59 @@
+{
+  "freeze_date": "2026-08-23",
+  "gate13_vectors": {
+    "checkpoint.cose": {
+      "bytes": 204,
+      "sha256": "6d7fd17b85c798242044cce0aa0938163954adbd7a0ff396dd7905f7003ef45d"
+    },
+    "delta.cose": {
+      "bytes": 266,
+      "sha256": "94f0882665abfa18913323a6776629f5087fee73710846273cee72e50b1cb92c"
+    }
+  },
+  "generated": {
+    "evidence_freeze": {
+      "bytes": 23990,
+      "file": "opportunistic_dns_freshness_evidence_freeze_v0.1_de.md",
+      "sha256": "e227f6943e02a6f6693b7b5253fefd248f148b8d49d01fe86dd7cf37b375286f"
+    },
+    "protocol_spec": {
+      "bytes": 96209,
+      "file": "opportunistic_dns_freshness_protocol_spec_v0.1_frozen_de.md",
+      "sha256": "d7e0f97ae530d01eed896c27afec22edb299b031dc2f408abb3817698e687af6"
+    }
+  },
+  "local_source_artifacts": {
+    "DNS_Service_Sync_Gate3B_Snapshot_2026-08-23(1).md": {
+      "bytes": 14003,
+      "sha256": "b5a9d3ac09700d9ac20f86ebd95c0faebdd3e2287d3b1e6a3391098b6f8cf4b6"
+    },
+    "Eingef\u00fcgter Text(20260823-083134).txt": {
+      "bytes": 10208,
+      "sha256": "a9407b7ad75967a75a12aea0c9ab90b3a6e87b67effb220e124e3aa018c0ae91"
+    },
+    "Eingef\u00fcgter Text(20260823-083904).txt": {
+      "bytes": 12546,
+      "sha256": "977af2200865abce03dacff121a4d1fc08655659d47d0d2a437821ed064d14ec"
+    },
+    "Eingef\u00fcgter Text(20260823-085634).txt": {
+      "bytes": 17343,
+      "sha256": "73133be85f68a63ef1cfd18cc012e41ff454981832f6eec484048729d74329ed"
+    },
+    "Eingef\u00fcgter Text(20260823-090016).txt": {
+      "bytes": 23078,
+      "sha256": "b1f2d82872280e14287606edd7d5f3e1b86b0edfa4fc2b58828c553fe8008e7d"
+    },
+    "Eingef\u00fcgter Text(20260823-090949).txt": {
+      "bytes": 16842,
+      "sha256": "c20e7bfc29169a8e3c7b5be2167ab22ef3aca8a4e24f3c945469a26fb58096c7"
+    },
+    "Eingef\u00fcgter Text(20260823-093609).txt": {
+      "bytes": 47475,
+      "sha256": "0928d65b7b1d7e7bb31174f13a3f4de125395562731a530f965680ee565d0ecc"
+    },
+    "opportunistic_dns_freshness_protocol_spec_v0.1_evidence-updated_de.md": {
+      "bytes": 86154,
+      "sha256": "53f5703ad65503f17117e6b4ba273d45a0ee28b8b9ee575b4dd99a6491e5e811"
+    }
+  }
+}

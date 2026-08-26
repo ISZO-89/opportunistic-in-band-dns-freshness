@@ -1,0 +1,3532 @@
+diff --git a/chrome/browser/net/stub_resolver_config_reader.cc b/chrome/browser/net/stub_resolver_config_reader.cc
+index d855df0c5e..362689d466 100644
+--- a/chrome/browser/net/stub_resolver_config_reader.cc
++++ b/chrome/browser/net/stub_resolver_config_reader.cc
+@@ -341,6 +341,14 @@ SecureDnsConfig StubResolverConfigReader::GetAndUpdateConfiguration(
+   SecureDnsConfig::ManagementMode forced_management_mode =
+       SecureDnsConfig::ManagementMode::kNoOverride;
+   bool is_managed = GetDnsOverHttpsConfigSource()->IsConfigManaged();
++
++  LOG(ERROR) << "DNSFRESH_DOH_PREF "
++             << "managed=" << is_managed
++             << " mode='"
++             << GetDnsOverHttpsConfigSource()->GetDnsOverHttpsMode()
++             << "' templates='"
++             << GetDnsOverHttpsConfigSource()->GetDnsOverHttpsTemplates()
++             << "'";
+   if (!is_managed && ShouldDisableDohForManaged()) {
+     secure_dns_mode = net::SecureDnsMode::kOff;
+     forced_management_mode = SecureDnsConfig::ManagementMode::kDisabledManaged;
+@@ -439,6 +447,11 @@ SecureDnsConfig StubResolverConfigReader::GetAndUpdateConfiguration(
+     }
+   }
+ 
++  LOG(ERROR) << "DNSFRESH_DOH_EFFECTIVE "
++             << "mode=" << static_cast<int>(secure_dns_mode)
++             << " servers=" << doh_config.servers().size()
++             << " update_network_service=" << update_network_service;
++
+   if (update_network_service) {
+     content::GetNetworkService()->ConfigureStubHostResolver(
+         GetInsecureStubResolverEnabled(), GetHappyEyeballsV3Enabled(),
+diff --git a/net/base/connection_endpoint_metadata.cc b/net/base/connection_endpoint_metadata.cc
+index c1dc9615c8..3454eea009 100644
+--- a/net/base/connection_endpoint_metadata.cc
++++ b/net/base/connection_endpoint_metadata.cc
+@@ -20,6 +20,7 @@ const char kSupportedProtocolAlpnsKey[] = "supported_protocol_alpns";
+ const char kEchConfigListKey[] = "ech_config_list";
+ const char kTargetNameKey[] = "target_name";
+ const char kTrustAnchorIDsKey[] = "trust_anchor_ids_list";
++const char kDnsFreshnessDiscoveryKey[] = "dns_freshness_discovery";
+ }  // namespace
+ 
+ ConnectionEndpointMetadata::ConnectionEndpointMetadata() = default;
+@@ -43,9 +44,10 @@ ConnectionEndpointMetadata::ConnectionEndpointMetadata(
+ bool ConnectionEndpointMetadata::operator<(
+     const ConnectionEndpointMetadata& other) const {
+   return std::tie(supported_protocol_alpns, ech_config_list, target_name,
+-                  trust_anchor_ids) <
++                  trust_anchor_ids, dns_freshness_discovery) <
+          std::tie(other.supported_protocol_alpns, other.ech_config_list,
+-                  other.target_name, other.trust_anchor_ids);
++                  other.target_name, other.trust_anchor_ids,
++                  other.dns_freshness_discovery);
+ }
+ 
+ base::Value ConnectionEndpointMetadata::ToValue() const {
+@@ -71,6 +73,11 @@ base::Value ConnectionEndpointMetadata::ToValue() const {
+     dict.Set(kTrustAnchorIDsKey, std::move(trust_anchor_ids_list));
+   }
+ 
++  if (!dns_freshness_discovery.empty()) {
++    dict.Set(kDnsFreshnessDiscoveryKey,
++             base::Base64Encode(dns_freshness_discovery));
++  }
++
+   return base::Value(std::move(dict));
+ }
+ 
+@@ -125,6 +132,17 @@ std::optional<ConnectionEndpointMetadata> ConnectionEndpointMetadata::FromValue(
+     }
+   }
+ 
++  const std::string* dns_freshness_discovery =
++      dict->FindString(kDnsFreshnessDiscoveryKey);
++  if (dns_freshness_discovery) {
++    std::optional<std::vector<uint8_t>> decoded_freshness =
++        base::Base64Decode(*dns_freshness_discovery);
++    if (!decoded_freshness) {
++      return std::nullopt;
++    }
++    metadata.dns_freshness_discovery = std::move(*decoded_freshness);
++  }
++
+   return metadata;
+ }
+ 
+diff --git a/net/base/connection_endpoint_metadata.h b/net/base/connection_endpoint_metadata.h
+index 93c7fecf8b..8150f3f4c0 100644
+--- a/net/base/connection_endpoint_metadata.h
++++ b/net/base/connection_endpoint_metadata.h
+@@ -69,6 +69,10 @@ struct NET_EXPORT_PRIVATE ConnectionEndpointMetadata {
+   // server as to which certificate it should serve so that the client will
+   // trust it.
+   std::vector<std::vector<uint8_t>> trust_anchor_ids;
++
++  // Opaque Native-v0.1 Opportunistic DNS Freshness discovery object carried
++  // from an HTTPS/SVCB record. Empty when Freshness was not advertised.
++  std::vector<uint8_t> dns_freshness_discovery;
+ };
+ 
+ }  // namespace net
+diff --git a/net/base/network_delegate.h b/net/base/network_delegate.h
+index c06565737a..3603ea6c70 100644
+--- a/net/base/network_delegate.h
++++ b/net/base/network_delegate.h
+@@ -17,6 +17,8 @@
+ #include "base/types/optional_ref.h"
+ #include "net/base/auth.h"
+ #include "net/base/completion_once_callback.h"
++#include "net/base/connection_endpoint_metadata.h"
++#include "net/base/network_anonymization_key.h"
+ #include "net/base/net_export.h"
+ #include "net/cookies/canonical_cookie.h"
+ #include "net/cookies/cookie_inclusion_status.h"
+@@ -79,6 +81,20 @@ class NET_EXPORT NetworkDelegate {
+       const IPEndPoint& remote_endpoint,
+       std::optional<GURL>* preserve_fragment_on_redirect_url,
+       const std::optional<net::SSLInfo>& ssl_info);
++  void NotifyConnectedRequestHeaders(
++      URLRequest* request,
++      HttpRequestHeaders* headers) {
++    OnConnectedRequestHeaders(request, headers);
++  }
++
++  void NotifyResolvedConnectionEndpointMetadata(
++      const std::string& hostname,
++      const NetworkAnonymizationKey& network_anonymization_key,
++      const std::vector<ConnectionEndpointMetadata>& metadatas) {
++    OnResolvedConnectionEndpointMetadata(
++        hostname, network_anonymization_key, metadatas);
++  }
++
+   void NotifyBeforeRedirect(URLRequest* request,
+                             const GURL& new_location);
+   void NotifyBeforeRetry(URLRequest* request);
+@@ -204,6 +220,16 @@ class NET_EXPORT NetworkDelegate {
+   // |callback| may not be called.
+   //
+   // The default implementation returns OK (continue with request).
++  // Called after connection/endpoint resolution and before the HTTP request
++  // headers are built and sent.
++  virtual void OnConnectedRequestHeaders(URLRequest*, HttpRequestHeaders*) {}
++
++  virtual void OnResolvedConnectionEndpointMetadata(
++      const std::string&,
++      const NetworkAnonymizationKey&,
++      const std::vector<ConnectionEndpointMetadata>&) {}
++
++
+   virtual int OnBeforeStartTransaction(
+       URLRequest* request,
+       const HttpRequestHeaders& headers,
+diff --git a/net/dns/dns_query.cc b/net/dns/dns_query.cc
+index e767e94cf3..db5c66d4af 100644
+--- a/net/dns/dns_query.cc
++++ b/net/dns/dns_query.cc
+@@ -147,7 +147,16 @@ DnsQuery::DnsQuery(uint16_t id,
+   dns_protocol::Header* header = header_in_io_buffer();
+   *header = {};
+   header->id = base::HostToNet16(id);
+-  header->flags = base::HostToNet16(dns_protocol::kFlagRD);
++  uint16_t query_flags = dns_protocol::kFlagRD;
++
++  // Native-v0.1 Freshness discovery is carried in HTTPS/SVCB. RFC 6840
++  // defines AD in a query as a signal that the requester understands and
++  // wants the validating resolver's AD result.
++  if (qtype == dns_protocol::kTypeHttps) {
++    query_flags |= dns_protocol::kFlagAD;
++  }
++
++  header->flags = base::HostToNet16(query_flags);
+   header->qdcount = base::HostToNet16(1);
+ 
+   // Write question section after the header.
+diff --git a/net/dns/dns_response_result_extractor.cc b/net/dns/dns_response_result_extractor.cc
+index c7c62bd79a..424ca1306e 100644
+--- a/net/dns/dns_response_result_extractor.cc
++++ b/net/dns/dns_response_result_extractor.cc
+@@ -476,11 +476,13 @@ bool RecordIsAlias(const RecordParsed* record) {
+   return record->rdata<HttpsRecordRdata>()->IsAlias();
+ }
+ 
+-ResultsOrError ExtractHttpsResults(const DnsResponse& response,
+-                                   std::string_view original_domain_name,
+-                                   uint16_t request_port,
+-                                   base::Time now,
+-                                   base::TimeTicks now_ticks) {
++ResultsOrError ExtractHttpsResults(
++    const DnsResponse& response,
++    std::string_view original_domain_name,
++    uint16_t request_port,
++    base::Time now,
++    base::TimeTicks now_ticks,
++    bool dnssec_authenticated_for_freshness) {
+   DCHECK(!original_domain_name.empty());
+ 
+   std::set<std::unique_ptr<HostResolverInternalResult>> results;
+@@ -580,6 +582,15 @@ ResultsOrError ExtractHttpsResults(const DnsResponse& response,
+ 
+     metadata.trust_anchor_ids = base::ToVector(service->trust_anchor_ids());
+ 
++    // The parser may retain the experimental Freshness SvcParam regardless of
++    // trust so normal SVCB parsing stays policy-neutral. Expose it above the
++    // DNS layer only after the caller has established the Native-v0.1
++    // DNSSEC trusted-validator condition.
++    if (dnssec_authenticated_for_freshness) {
++      metadata.dns_freshness_discovery =
++          service->dns_freshness_discovery();
++    }
++
+     metadatas.emplace(service->priority(), std::move(metadata));
+ 
+     min_ttl = std::min(ttl, min_ttl.value_or(base::TimeDelta::Max()));
+@@ -640,7 +651,8 @@ DnsResponseResultExtractor::~DnsResponseResultExtractor() = default;
+ ResultsOrError DnsResponseResultExtractor::ExtractDnsResults(
+     DnsQueryType query_type,
+     std::string_view original_domain_name,
+-    uint16_t request_port) const {
++    uint16_t request_port,
++    bool dnssec_authenticated_for_freshness) const {
+   DCHECK(!original_domain_name.empty());
+ 
+   switch (query_type) {
+@@ -661,8 +673,9 @@ ResultsOrError DnsResponseResultExtractor::ExtractDnsResults(
+       return ExtractServiceResults(*response_, clock_->Now(),
+                                    tick_clock_->NowTicks());
+     case DnsQueryType::HTTPS:
+-      return ExtractHttpsResults(*response_, original_domain_name, request_port,
+-                                 clock_->Now(), tick_clock_->NowTicks());
++      return ExtractHttpsResults(
++          *response_, original_domain_name, request_port, clock_->Now(),
++          tick_clock_->NowTicks(), dnssec_authenticated_for_freshness);
+   }
+ }
+ 
+diff --git a/net/dns/dns_response_result_extractor.h b/net/dns/dns_response_result_extractor.h
+index 5ebe27da99..e36a9d8762 100644
+--- a/net/dns/dns_response_result_extractor.h
++++ b/net/dns/dns_response_result_extractor.h
+@@ -73,9 +73,11 @@ class NET_EXPORT_PRIVATE DnsResponseResultExtractor {
+   // May have the side effect of recording metrics about DnsResponses as they
+   // are parsed, so while not an absolute requirement, any given DnsResponse
+   // should only be used and extracted from at most once.
+-  ResultsOrError ExtractDnsResults(DnsQueryType query_type,
+-                                   std::string_view original_domain_name,
+-                                   uint16_t request_port) const;
++  ResultsOrError ExtractDnsResults(
++      DnsQueryType query_type,
++      std::string_view original_domain_name,
++      uint16_t request_port,
++      bool dnssec_authenticated_for_freshness = false) const;
+ 
+  private:
+   const raw_ref<const DnsResponse> response_;
+diff --git a/net/dns/host_cache.cc b/net/dns/host_cache.cc
+index 05cd0d4dd5..9fc48d6be2 100644
+--- a/net/dns/host_cache.cc
++++ b/net/dns/host_cache.cc
+@@ -44,6 +44,7 @@
+ #include "net/dns/public/host_resolver_source.h"
+ #include "net/log/net_log.h"
+ #include "url/scheme_host_port.h"
++#include "base/logging.h"
+ 
+ namespace net {
+ 
+@@ -528,8 +529,26 @@ std::vector<ServiceEndpoint> HostCache::Entry::ConvertToServiceEndpoints(
+ 
+   // See HostCache::Entry::GetEndpoints.
+   if (!ipv4_endpoints.empty() || !ipv6_endpoints.empty()) {
++    LOG(ERROR) << "DNS_FRESHNESS_NATIVE HOSTCACHE"
++               << " metadata_count=" << GetMetadatas().size()
++               << " canonical_count=" << canonical_names().size();
++
+     for (const auto& metadata : GetMetadatas()) {
+-      if (!canonical_names().contains(metadata.target_name)) {
++      const bool canonical_match =
++          canonical_names().contains(metadata.target_name);
++
++      LOG(ERROR) << "DNS_FRESHNESS_NATIVE HOSTCACHE_METADATA"
++                 << " target=" << metadata.target_name
++                 << " match=" << canonical_match
++                 << " freshness_bytes="
++                 << metadata.dns_freshness_discovery.size();
++
++      for (const auto& canonical_name : canonical_names()) {
++        LOG(ERROR) << "DNS_FRESHNESS_NATIVE HOSTCACHE_CANONICAL"
++                   << " name=" << canonical_name;
++      }
++
++      if (!canonical_match) {
+         continue;
+       }
+ 
+@@ -889,6 +908,81 @@ void HostCache::Set(const Key& key,
+     delegate_->ScheduleWrite();
+ }
+ 
++
++bool HostCache::UpdateActiveAddressForFreshness(
++    std::string_view hostname,
++    const NetworkAnonymizationKey& network_anonymization_key,
++    const IPAddress& address,
++    base::TimeTicks now,
++    base::TimeDelta ttl) {
++  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
++
++  if (!address.IsValid() || ttl < base::TimeDelta()) {
++    return false;
++  }
++
++  // Collect replacements first. HostCache::Set() mutates entries_, so it must
++  // not be called while entries_ is being iterated.
++  std::vector<std::pair<Key, Entry>> replacements;
++
++  for (const auto& cache_entry : entries_) {
++    const Key& key = cache_entry.first;
++    const Entry& entry = cache_entry.second;
++
++    if (GetHostname(key.host) != hostname) {
++      continue;
++    }
++
++    if (key.network_anonymization_key != network_anonymization_key) {
++      continue;
++    }
++
++    // Freshness only updates DNS-derived state. HOSTS/config entries are not
++    // rewritten by application-carried DNS state.
++    if (entry.source() != Entry::SOURCE_DNS) {
++      continue;
++    }
++
++    // Evicted entries are absent. Expired/past-network entries are not active
++    // Freshness state and must return to normal resolver policy.
++    if (entry.IsStale(now, network_changes_)) {
++      continue;
++    }
++
++    std::vector<IPEndPoint> endpoints = entry.ip_endpoints();
++    bool replaced = false;
++
++    for (IPEndPoint& endpoint : endpoints) {
++      const bool same_family =
++          (address.IsIPv4() && endpoint.address().IsIPv4()) ||
++          (address.IsIPv6() && endpoint.address().IsIPv6());
++
++      if (!same_family) {
++        continue;
++      }
++
++      endpoint = IPEndPoint(address, endpoint.port());
++      replaced = true;
++    }
++
++    if (!replaced) {
++      continue;
++    }
++
++    Entry replacement(entry);
++    replacement.set_ip_endpoints(std::move(endpoints));
++
++    replacements.emplace_back(key, std::move(replacement));
++  }
++
++  for (const auto& replacement : replacements) {
++    Set(replacement.first, replacement.second, now, ttl);
++  }
++
++  return !replacements.empty();
++}
++
++
+ const HostCache::Key* HostCache::GetMatchingKeyForTesting(
+     std::string_view hostname,
+     HostCache::Entry::Source* source_out,
+diff --git a/net/dns/host_cache.h b/net/dns/host_cache.h
+index 1afd1d0ccf..7cf509e2cf 100644
+--- a/net/dns/host_cache.h
++++ b/net/dns/host_cache.h
+@@ -405,6 +405,21 @@ class NET_EXPORT HostCache {
+            base::TimeTicks now,
+            base::TimeDelta ttl);
+ 
++  // Opportunistic DNS Freshness PoC:
++  //
++  // Updates address data only for an already existing, non-stale DNS cache
++  // entry in the same NetworkAnonymizationKey partition.
++  //
++  // This intentionally does NOT create a cache entry. If the hostname was
++  // evicted, Freshness interest is considered inactive and normal DNS must
++  // perform a new admission.
++  bool UpdateActiveAddressForFreshness(
++      std::string_view hostname,
++      const NetworkAnonymizationKey& network_anonymization_key,
++      const IPAddress& address,
++      base::TimeTicks now,
++      base::TimeDelta ttl);
++
+   // Checks whether an entry exists for `hostname`.
+   // If so, returns the matching key and writes the source (e.g. DNS, HOSTS
+   // file, etc.) to `source_out` and the staleness to `stale_out` (if they are
+diff --git a/net/dns/host_resolver_dns_task.cc b/net/dns/host_resolver_dns_task.cc
+index 3cc9d21da1..a3c3626f24 100644
+--- a/net/dns/host_resolver_dns_task.cc
++++ b/net/dns/host_resolver_dns_task.cc
+@@ -569,6 +569,32 @@ void HostResolverDnsTask::OnDnsTransactionComplete(
+ 
+   DCHECK(response);
+ 
++  // Native-v0.1 trusted validating-resolver profile.
++  //
++  // Freshness bootstrap is accepted only when the browser is explicitly
++  // operating in Secure-DNS-only mode, this transaction actually used DoH,
++  // and the configured validating resolver asserts DNSSEC Authenticated Data.
++  //
++  // The benchmark/profile configuration therefore defines the trusted
++  // validator set; `secure()` or AD alone are never sufficient.
++  const bool dnssec_authenticated_for_freshness =
++      transaction_info->type == DnsQueryType::HTTPS &&
++      secure_dns_mode_ == SecureDnsMode::kSecure && secure() &&
++      (response->flags() & dns_protocol::kFlagAD) != 0;
++
++  LOG(ERROR) << "DNS_FRESHNESS_NATIVE DNSSEC_GATE"
++             << " host=" << host_.GetHostnameWithoutBrackets()
++             << " type=" << static_cast<int>(transaction_info->type)
++             << " is_https="
++             << (transaction_info->type == DnsQueryType::HTTPS)
++             << " mode=" << static_cast<int>(secure_dns_mode_)
++             << " secure=" << secure()
++             << " ad="
++             << ((response->flags() & dns_protocol::kFlagAD) != 0)
++             << " authenticated="
++             << dnssec_authenticated_for_freshness
++             << " flags=" << response->flags();
++
+   DnsResponseResultExtractor::ResultsOrError results;
+   {
+     // Scope the extractor to ensure it is destroyed before `response`.
+@@ -576,7 +602,7 @@ void HostResolverDnsTask::OnDnsTransactionComplete(
+     results = extractor.ExtractDnsResults(
+         transaction_info->type,
+         /*original_domain_name=*/host_.GetHostnameWithoutBrackets(),
+-        request_port);
++        request_port, dnssec_authenticated_for_freshness);
+   }
+ 
+   if (!results.has_value()) {
+diff --git a/net/dns/host_resolver_manager_request_impl.cc b/net/dns/host_resolver_manager_request_impl.cc
+index 14e9e1db95..975d03d4da 100644
+--- a/net/dns/host_resolver_manager_request_impl.cc
++++ b/net/dns/host_resolver_manager_request_impl.cc
+@@ -22,6 +22,7 @@
+ #include "net/base/completion_once_callback.h"
+ #include "net/base/features.h"
+ #include "net/base/network_anonymization_key.h"
++#include "net/base/network_delegate.h"
+ #include "net/base/request_priority.h"
+ #include "net/dns/dns_alias_utility.h"
+ #include "net/dns/host_cache.h"
+@@ -186,6 +187,31 @@ void HostResolverManager::RequestImpl::SetResults(
+   results_ = std::move(results);
+   resolution_details_ = resolution_details;
+   FixUpEndpointAndAliasResults();
++
++  // Opportunistic DNS Freshness: ResolveHostRequest is used by the direct
++  // QUIC/H3 path. Forward authenticated HTTPS/SVCB endpoint metadata through
++  // the same NetworkDelegate bridge used by ServiceEndpointRequest.
++  if (resolve_context_ && resolve_context_->url_request_context()) {
++    NetworkDelegate* network_delegate =
++        resolve_context_->url_request_context()->network_delegate();
++
++    if (network_delegate) {
++      std::vector<ConnectionEndpointMetadata> metadatas;
++
++      for (const HostResolverEndpointResult& endpoint : endpoint_results_) {
++        if (endpoint.metadata != ConnectionEndpointMetadata()) {
++          metadatas.push_back(endpoint.metadata);
++        }
++      }
++
++      if (!metadatas.empty()) {
++        network_delegate->NotifyResolvedConnectionEndpointMetadata(
++            std::string(request_host_.GetHostnameWithoutBrackets()),
++            network_anonymization_key_,
++            metadatas);
++      }
++    }
++  }
+ }
+ 
+ void HostResolverManager::RequestImpl::set_error_info(
+diff --git a/net/dns/host_resolver_manager_service_endpoint_request_impl.cc b/net/dns/host_resolver_manager_service_endpoint_request_impl.cc
+index 3e032da306..8d29203640 100644
+--- a/net/dns/host_resolver_manager_service_endpoint_request_impl.cc
++++ b/net/dns/host_resolver_manager_service_endpoint_request_impl.cc
+@@ -4,6 +4,9 @@
+ 
+ #include "net/dns/host_resolver_manager_service_endpoint_request_impl.h"
+ 
++#include "net/base/network_delegate.h"
++#include "net/url_request/url_request_context.h"
++
+ #include <sstream>
+ 
+ #include "base/containers/to_vector.h"
+@@ -234,6 +237,10 @@ void HostResolverManager::ServiceEndpointRequestImpl::OnJobCompleted(
+   const bool is_secure_network_error =
+       obtained_securely && results.error() != OK;
+   error_info_ = ResolveErrorInfo(results.error(), is_secure_network_error);
++
++  if (results.error() == OK) {
++    NotifyNetworkDelegateOfEndpointMetadata();
++  }
+   delegate_->OnServiceEndpointRequestFinished(
+       HostResolver::SquashErrorCode(results.error()));
+   // Do not add code below. `this` may be deleted at this point.
+@@ -273,6 +280,7 @@ void HostResolverManager::ServiceEndpointRequestImpl::
+ 
+   CHECK(job_);
+   CHECK(delegate_);
++  NotifyNetworkDelegateOfEndpointMetadata();
+   delegate_->OnServiceEndpointsUpdated();
+   // Do not add code below. `this` may be deleted at this point.
+ }
+@@ -433,6 +441,9 @@ int HostResolverManager::ServiceEndpointRequestImpl::DoResolveLocally() {
+     }
+     SetFinalizedResultFromLegacyResults(results);
+     error_info_ = ResolveErrorInfo(results.error());
++    if (results.error() == OK) {
++      NotifyNetworkDelegateOfEndpointMetadata();
++    }
+     return results.error();
+   }
+ 
+@@ -465,6 +476,63 @@ void HostResolverManager::ServiceEndpointRequestImpl::
+   }
+ }
+ 
++void HostResolverManager::ServiceEndpointRequestImpl::
++    NotifyNetworkDelegateOfEndpointMetadata() {
++  DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
++
++  LOG(ERROR) << "DNS_FRESHNESS_NATIVE NOTIFY_ENTER"
++             << " host=" << host_.GetHostnameWithoutBrackets();
++
++  if (!resolve_context_) {
++    LOG(ERROR) << "DNS_FRESHNESS_NATIVE NOTIFY_STOP=NO_RESOLVE_CONTEXT";
++    return;
++  }
++
++  if (!resolve_context_->url_request_context()) {
++    LOG(ERROR) << "DNS_FRESHNESS_NATIVE NOTIFY_STOP=NO_URL_REQUEST_CONTEXT";
++    return;
++  }
++
++  NetworkDelegate* network_delegate =
++      resolve_context_->url_request_context()->network_delegate();
++  if (!network_delegate) {
++    LOG(ERROR) << "DNS_FRESHNESS_NATIVE NOTIFY_STOP=NO_NETWORK_DELEGATE";
++    return;
++  }
++
++  auto endpoints = GetEndpointResults();
++
++  LOG(ERROR) << "DNS_FRESHNESS_NATIVE NOTIFY_ENDPOINTS"
++             << " count=" << endpoints.size();
++
++  std::vector<ConnectionEndpointMetadata> metadatas;
++  for (const ServiceEndpoint& endpoint : endpoints) {
++    LOG(ERROR) << "DNS_FRESHNESS_NATIVE NOTIFY_ENDPOINT"
++               << " target=" << endpoint.metadata.target_name
++               << " freshness_bytes="
++               << endpoint.metadata.dns_freshness_discovery.size()
++               << " default_metadata="
++               << (endpoint.metadata == ConnectionEndpointMetadata());
++
++    if (endpoint.metadata != ConnectionEndpointMetadata()) {
++      metadatas.push_back(endpoint.metadata);
++    }
++  }
++
++  if (metadatas.empty()) {
++    LOG(ERROR) << "DNS_FRESHNESS_NATIVE NOTIFY_STOP=NO_METADATA";
++    return;
++  }
++
++  LOG(ERROR) << "DNS_FRESHNESS_NATIVE NOTIFY_FORWARD"
++             << " count=" << metadatas.size();
++
++  network_delegate->NotifyResolvedConnectionEndpointMetadata(
++      std::string(host_.GetHostnameWithoutBrackets()),
++      network_anonymization_key_,
++      metadatas);
++}
++
+ void HostResolverManager::ServiceEndpointRequestImpl::MaybeClearStaleResults() {
+   if (parameters_.cache_usage ==
+           ResolveHostParameters::CacheUsage::STALE_ALLOWED_WHILE_REFRESHING &&
+diff --git a/net/dns/host_resolver_manager_service_endpoint_request_impl.h b/net/dns/host_resolver_manager_service_endpoint_request_impl.h
+index 096005a7af..4b3eaa6639 100644
+--- a/net/dns/host_resolver_manager_service_endpoint_request_impl.h
++++ b/net/dns/host_resolver_manager_service_endpoint_request_impl.h
+@@ -102,6 +102,8 @@ class HostResolverManager::ServiceEndpointRequestImpl
+ 
+   void SetFinalizedResultFromLegacyResults(const HostCache::Entry& results);
+ 
++  void NotifyNetworkDelegateOfEndpointMetadata();
++
+   void MaybeClearStaleResults();
+ 
+   void LogCancelRequest();
+diff --git a/net/dns/https_record_rdata.cc b/net/dns/https_record_rdata.cc
+index 4dffce9d5f..4ebee7519d 100644
+--- a/net/dns/https_record_rdata.cc
++++ b/net/dns/https_record_rdata.cc
+@@ -42,6 +42,7 @@ constexpr auto kSupportedKeys = base::MakeFixedFlatSet<uint16_t>(
+         dns_protocol::kHttpsServiceParamKeyEchConfig,
+         dns_protocol::kHttpsServiceParamKeyIpv6Hint,
+         dns_protocol::kHttpsServiceParamKeyTrustAnchorIDs,
++        dns_protocol::kHttpsServiceParamKeyDnsFreshness,
+     });
+ 
+ bool ReadNextServiceParam(std::optional<uint16_t> last_key,
+@@ -324,7 +325,8 @@ bool ServiceFormHttpsRecordRdata::IsEqual(const HttpsRecordRdata* other) const {
+          ipv4_hint_ == service->ipv4_hint_ &&
+          ech_config_ == service->ech_config_ &&
+          ipv6_hint_ == service->ipv6_hint_ &&
+-         trust_anchor_ids_ == service->trust_anchor_ids_;
++         trust_anchor_ids_ == service->trust_anchor_ids_ &&
++         dns_freshness_discovery_ == service->dns_freshness_discovery_;
+ }
+ 
+ bool ServiceFormHttpsRecordRdata::IsAlias() const {
+@@ -470,6 +472,12 @@ std::unique_ptr<ServiceFormHttpsRecordRdata> ServiceFormHttpsRecordRdata::Parse(
+     }
+   }
+ 
++  std::vector<uint8_t> dns_freshness_discovery;
++  if (param_key == dns_protocol::kHttpsServiceParamKeyDnsFreshness) {
++    DCHECK(IsSupportedKey(param_key));
++    dns_freshness_discovery.assign(param_value.begin(), param_value.end());
++  }
++
+   for (;;) {
+     if (reader.remaining() == 0) {
+       break;
+@@ -477,19 +485,35 @@ std::unique_ptr<ServiceFormHttpsRecordRdata> ServiceFormHttpsRecordRdata::Parse(
+     if (!ReadNextServiceParam(param_key, reader, &param_key, &param_value)) {
+       return nullptr;
+     }
+-    DCHECK(!IsSupportedKey(param_key));
++
++    if (param_key == dns_protocol::kHttpsServiceParamKeyDnsFreshness) {
++      DCHECK(IsSupportedKey(param_key));
++      dns_freshness_discovery.assign(param_value.begin(), param_value.end());
++    } else {
++      DCHECK(!IsSupportedKey(param_key));
++    }
+   }
+ 
+-  return std::make_unique<ServiceFormHttpsRecordRdata>(
++  auto result = std::make_unique<ServiceFormHttpsRecordRdata>(
+       HttpsRecordPriority{priority}, std::move(service_name).value(),
+       std::move(mandatory_keys), std::move(alpn_ids), default_alpn, port,
+       std::move(ipv4_hint), ech_config, std::move(ipv6_hint),
+       std::move(trust_anchor_ids));
++  result->dns_freshness_discovery_ = std::move(dns_freshness_discovery);
++  return result;
+ }
+ 
+ bool ServiceFormHttpsRecordRdata::IsCompatible() const {
+   for (uint16_t mandatory_key : mandatory_keys_) {
+     DCHECK_NE(mandatory_key, dns_protocol::kHttpsServiceParamKeyMandatory);
++
++    // Native-v0.1 Freshness is intentionally backwards-compatible.
++    // Legacy clients must be able to ignore the experimental Freshness
++    // SvcParam and still use the ServiceMode record.
++    if (mandatory_key == dns_protocol::kHttpsServiceParamKeyDnsFreshness) {
++      return false;
++    }
++
+     if (!kSupportedKeys.contains(mandatory_key)) {
+       return false;
+     }
+diff --git a/net/dns/https_record_rdata.h b/net/dns/https_record_rdata.h
+index 19c4a143c1..b9c296ecf2 100644
+--- a/net/dns/https_record_rdata.h
++++ b/net/dns/https_record_rdata.h
+@@ -106,6 +106,9 @@ class NET_EXPORT_PRIVATE ServiceFormHttpsRecordRdata : public HttpsRecordRdata {
+   const std::vector<std::vector<uint8_t>>& trust_anchor_ids() const {
+     return trust_anchor_ids_;
+   }
++  const std::vector<uint8_t>& dns_freshness_discovery() const {
++    return dns_freshness_discovery_;
++  }
+ 
+   // Returns whether or not this rdata parser is considered "compatible" with
+   // the parsed rdata. That is that all keys listed by mandatory_keys() (and all
+@@ -128,6 +131,11 @@ class NET_EXPORT_PRIVATE ServiceFormHttpsRecordRdata : public HttpsRecordRdata {
+   std::vector<uint8_t> ech_config_;
+   const std::vector<IPAddress> ipv6_hint_;
+   std::vector<std::vector<uint8_t>> trust_anchor_ids_;
++
++  // Opaque Native-v0.1 Opportunistic DNS Freshness discovery object from
++  // SVCB/HTTPS key 65400. Parsing/verification is intentionally performed by
++  // the Freshness layer rather than the generic HTTPS RR parser.
++  std::vector<uint8_t> dns_freshness_discovery_;
+ };
+ 
+ }  // namespace net
+diff --git a/net/dns/public/dns_protocol.h b/net/dns/public/dns_protocol.h
+index aa48094d1a..d81dabec20 100644
+--- a/net/dns/public/dns_protocol.h
++++ b/net/dns/public/dns_protocol.h
+@@ -193,6 +193,7 @@ static const uint16_t kFlagResponse = 0x8000;
+ static const uint16_t kFlagAA = 0x400;  // Authoritative Answer - response flag.
+ static const uint16_t kFlagRD = 0x100;  // Recursion Desired - query flag.
+ static const uint16_t kFlagTC = 0x200;  // Truncated - server flag.
++static const uint16_t kFlagAD = 0x20;   // Authenticated Data - response flag.
+ 
+ // SVCB/HTTPS ServiceParamKey
+ //
+@@ -206,6 +207,10 @@ static constexpr uint16_t kHttpsServiceParamKeyEchConfig = 5;
+ static constexpr uint16_t kHttpsServiceParamKeyIpv6Hint = 6;
+ static constexpr uint16_t kHttpsServiceParamKeyTrustAnchorIDs = 13930;
+ 
++// Opportunistic DNS Freshness Native-v0.1 experimental Private-Use key.
++// This is a lab value, not an IANA allocation.
++static constexpr uint16_t kHttpsServiceParamKeyDnsFreshness = 65400;
++
+ // draft-ietf-dnsop-svcb-https-08#section-9
+ inline constexpr char kHttpsServiceDefaultAlpn[] = "http/1.1";
+ 
+diff --git a/net/http/http_cache_transaction.cc b/net/http/http_cache_transaction.cc
+index 3b494dd0c6..fb23cc51f4 100644
+--- a/net/http/http_cache_transaction.cc
++++ b/net/http/http_cache_transaction.cc
+@@ -601,8 +601,8 @@ void HttpCache::Transaction::SetEarlyResponseHeadersCallback(
+ 
+ void HttpCache::Transaction::SetModifyRequestHeadersCallback(
+     base::RepeatingCallback<void(HttpRequestHeaders*)> callback) {
+-  // This method should not be called for this class.
+-  NOTREACHED();
++  DCHECK(!network_trans_);
++  modify_request_headers_callback_ = std::move(callback);
+ }
+ 
+ void HttpCache::Transaction::SetIsSharedDictionaryReadAllowedCallback(
+@@ -1989,6 +1989,10 @@ int HttpCache::Transaction::DoSendRequest() {
+   network_trans_->SetEarlyResponseHeadersCallback(
+       early_response_headers_callback_);
+   network_trans_->SetResponseHeadersCallback(response_headers_callback_);
++  if (!modify_request_headers_callback_.is_null()) {
++    network_trans_->SetModifyRequestHeadersCallback(
++        modify_request_headers_callback_);
++  }
+   if (is_shared_dictionary_read_allowed_callback_) {
+     network_trans_->SetIsSharedDictionaryReadAllowedCallback(
+         is_shared_dictionary_read_allowed_callback_);
+diff --git a/net/http/http_cache_transaction.h b/net/http/http_cache_transaction.h
+index 29e92635f0..9618bff332 100644
+--- a/net/http/http_cache_transaction.h
++++ b/net/http/http_cache_transaction.h
+@@ -858,6 +858,8 @@ class NET_EXPORT_PRIVATE HttpCache::Transaction : public HttpTransaction {
+   RequestHeadersCallback request_headers_callback_;
+   ResponseHeadersCallback early_response_headers_callback_;
+   ResponseHeadersCallback response_headers_callback_;
++  base::RepeatingCallback<void(HttpRequestHeaders*)>
++      modify_request_headers_callback_;
+ 
+   // True if the Transaction is currently processing the DoLoop.
+   bool in_do_loop_ = false;
+diff --git a/net/shared_dictionary/shared_dictionary_network_transaction.cc b/net/shared_dictionary/shared_dictionary_network_transaction.cc
+index c89fab5ef7..1a3c6101d4 100644
+--- a/net/shared_dictionary/shared_dictionary_network_transaction.cc
++++ b/net/shared_dictionary/shared_dictionary_network_transaction.cc
+@@ -141,6 +141,10 @@ int SharedDictionaryNetworkTransaction::Start(const HttpRequestInfo* request,
+                                      request->is_subframe_document_resource;
+   if (!(request->load_flags & LOAD_CAN_USE_SHARED_DICTIONARY) ||
+       !request->dictionary_getter) {
++    if (!modify_request_headers_callback_.is_null()) {
++      network_transaction_->SetModifyRequestHeadersCallback(
++          modify_request_headers_callback_);
++    }
+     return network_transaction_->Start(request, std::move(callback), net_log);
+   }
+   std::optional<SharedDictionaryIsolationKey> isolation_key =
+@@ -238,6 +242,10 @@ void SharedDictionaryNetworkTransaction::OnStartCompleted(
+ void SharedDictionaryNetworkTransaction::ModifyRequestHeaders(
+     const GURL& request_url,
+     HttpRequestHeaders* request_headers) {
++  if (!modify_request_headers_callback_.is_null()) {
++    modify_request_headers_callback_.Run(request_headers);
++  }
++
+   // `shared_dictionary_` may have been already set if this transaction was
+   // restarted
+   if (!shared_dictionary_) {
+@@ -522,8 +530,7 @@ void SharedDictionaryNetworkTransaction::SetConnectedCallback(
+ 
+ void SharedDictionaryNetworkTransaction::SetModifyRequestHeadersCallback(
+     base::RepeatingCallback<void(HttpRequestHeaders*)> callback) {
+-  // This method should not be called for this class.
+-  NOTREACHED();
++  modify_request_headers_callback_ = std::move(callback);
+ }
+ 
+ void SharedDictionaryNetworkTransaction::
+diff --git a/net/shared_dictionary/shared_dictionary_network_transaction.h b/net/shared_dictionary/shared_dictionary_network_transaction.h
+index 6bdae77986..ab7256e9d2 100644
+--- a/net/shared_dictionary/shared_dictionary_network_transaction.h
++++ b/net/shared_dictionary/shared_dictionary_network_transaction.h
+@@ -165,6 +165,8 @@ class NET_EXPORT SharedDictionaryNetworkTransaction : public HttpTransaction {
+   std::unique_ptr<HttpResponseInfo> shared_dictionary_response_info_;
+ 
+   ConnectedCallback connected_callback_;
++  base::RepeatingCallback<void(HttpRequestHeaders*)>
++      modify_request_headers_callback_;
+ 
+   bool cert_is_issued_by_known_root_ = false;
+   NextProto negotiated_protocol_ = NextProto::kProtoUnknown;
+diff --git a/net/url_request/url_request_http_job.cc b/net/url_request/url_request_http_job.cc
+index 2d627cd75e..96a9de453e 100644
+--- a/net/url_request/url_request_http_job.cc
++++ b/net/url_request/url_request_http_job.cc
+@@ -749,7 +749,21 @@ void URLRequestHttpJob::StartTransactionInternal() {
+     if (rv == OK) {
+       transaction_->SetConnectedCallback(base::BindRepeating(
+           &URLRequestHttpJob::NotifyConnectedCallback, base::Unretained(this)));
+-      transaction_->SetRequestHeadersCallback(request_headers_callback_);
++      transaction_->SetModifyRequestHeadersCallback(base::BindRepeating(
++      [](base::WeakPtr<URLRequestHttpJob> job,
++         HttpRequestHeaders* headers) {
++        if (!job) {
++          return;
++        }
++        NetworkDelegate* network_delegate = job->request()->network_delegate();
++        if (network_delegate) {
++          network_delegate->NotifyConnectedRequestHeaders(job->request(),
++                                                          headers);
++        }
++      },
++      weak_factory_.GetWeakPtr()));
++
++  transaction_->SetRequestHeadersCallback(request_headers_callback_);
+       transaction_->SetEarlyResponseHeadersCallback(
+           early_response_headers_callback_);
+       transaction_->SetResponseHeadersCallback(response_headers_callback_);
+diff --git a/services/network/BUILD.gn b/services/network/BUILD.gn
+index 66c8791784..1cedc58034 100644
+--- a/services/network/BUILD.gn
++++ b/services/network/BUILD.gn
+@@ -71,6 +71,13 @@ component("network_service") {
+     "enterprise/encryption/os_crypt_cache_encryption_delegate.h",
+     "file_opener_for_upload.cc",
+     "file_opener_for_upload.h",
++    "freshness/freshness_cursor.cc",
++    "freshness/freshness_cursor.h",
++    "freshness/freshness_processor.cc",
++    "freshness/freshness_state_store.cc",
++    "freshness/freshness_state_store.h",
++    "freshness/freshness_wire_profile.h",
++    "freshness/freshness_processor.h",
+     "host_resolver.cc",
+     "host_resolver.h",
+     "host_resolver_mdns_listener.cc",
+@@ -357,6 +364,7 @@ component("network_service") {
+     "//base",
+     "//base:build_time",
+     "//build:chromecast_buildflags",
++    "//components/cbor",
+     "//components/content_settings/core/common",
+     "//components/cookie_config",
+     "//components/domain_reliability",
+@@ -392,6 +400,7 @@ component("network_service") {
+     "//services/network/trust_tokens",
+     "//services/service_manager/public/cpp",
+     "//services/service_manager/public/mojom",
++    "//third_party/boringssl",
+     "//third_party/liburlpattern",
+     "//third_party/re2",
+     "//third_party/zstd:decompress",
+diff --git a/services/network/freshness/freshness_cursor.cc b/services/network/freshness/freshness_cursor.cc
+new file mode 100644
+index 0000000000..7bd2a395da
+--- /dev/null
++++ b/services/network/freshness/freshness_cursor.cc
+@@ -0,0 +1,197 @@
++// Copyright 2026
++// Opportunistic DNS Freshness research prototype.
++
++#include "services/network/freshness/freshness_cursor.h"
++
++#include <algorithm>
++#include <array>
++#include <cstdint>
++#include <string>
++#include <utility>
++#include <vector>
++
++#include "base/base64.h"
++#include "services/network/freshness/freshness_wire_profile.h"
++
++namespace network::freshness {
++
++namespace {
++
++void AppendTypeAndLength(std::vector<uint8_t>* out,
++                         uint8_t major_type,
++                         uint64_t value) {
++  if (value < 24) {
++    out->push_back(
++        static_cast<uint8_t>((major_type << 5) | value));
++    return;
++  }
++
++  if (value <= 0xff) {
++    out->push_back(
++        static_cast<uint8_t>((major_type << 5) | 24));
++    out->push_back(static_cast<uint8_t>(value));
++    return;
++  }
++
++  if (value <= 0xffff) {
++    out->push_back(
++        static_cast<uint8_t>((major_type << 5) | 25));
++    out->push_back(static_cast<uint8_t>(value >> 8));
++    out->push_back(static_cast<uint8_t>(value));
++    return;
++  }
++
++  if (value <= 0xffffffffULL) {
++    out->push_back(
++        static_cast<uint8_t>((major_type << 5) | 26));
++
++    for (int shift = 24; shift >= 0; shift -= 8) {
++      out->push_back(
++          static_cast<uint8_t>(value >> shift));
++    }
++
++    return;
++  }
++
++  out->push_back(
++      static_cast<uint8_t>((major_type << 5) | 27));
++
++  for (int shift = 56; shift >= 0; shift -= 8) {
++    out->push_back(
++        static_cast<uint8_t>(value >> shift));
++  }
++}
++
++void AppendUnsigned(std::vector<uint8_t>* out, uint64_t value) {
++  AppendTypeAndLength(out, 0, value);
++}
++
++void AppendArrayHeader(std::vector<uint8_t>* out, uint64_t count) {
++  AppendTypeAndLength(out, 4, count);
++}
++
++void AppendMapHeader(std::vector<uint8_t>* out, uint64_t count) {
++  AppendTypeAndLength(out, 5, count);
++}
++
++template <size_t N>
++void AppendByteArray(std::vector<uint8_t>* out,
++                     const std::array<uint8_t, N>& bytes) {
++  AppendTypeAndLength(out, 2, N);
++  out->insert(out->end(), bytes.begin(), bytes.end());
++}
++
++bool ScopePointerLess(const ScopeState* a, const ScopeState* b) {
++  if (!a || !b) {
++    return a < b;
++  }
++
++  if (a->scope_id != b->scope_id) {
++    return a->scope_id < b->scope_id;
++  }
++
++  if (a->generation != b->generation) {
++    return a->generation < b->generation;
++  }
++
++  return a->state_digest < b->state_digest;
++}
++
++}  // namespace
++
++std::optional<std::string> BuildFreshnessRequestField(
++    const ServiceState& service,
++    std::vector<const ScopeState*> scopes) {
++  if (scopes.size() > wire::kMaxCursorScopes) {
++    return std::nullopt;
++  }
++
++  for (const ScopeState* scope : scopes) {
++    if (!scope) {
++      return std::nullopt;
++    }
++  }
++
++  // Deterministic ordering must not depend on insertion/LRU order.
++  std::sort(
++      scopes.begin(),
++      scopes.end(),
++      ScopePointerLess);
++
++  std::vector<uint8_t> cbor;
++
++  // {
++  //   0: version,
++  //   1: service_id,
++  //   2: [
++  //        {
++  //          0: root_epoch,
++  //          1: scope_id,
++  //          2: generation,
++  //          3: state_digest,
++  //          4: client_max_object_size
++  //        },
++  //        ...
++  //      ]
++  // }
++  AppendMapHeader(&cbor, 3);
++
++  AppendUnsigned(&cbor, wire::cursor_label::kVersion);
++  AppendUnsigned(&cbor, wire::kProtocolVersion);
++
++  AppendUnsigned(&cbor, wire::cursor_label::kServiceId);
++  AppendByteArray(&cbor, service.service_id);
++
++  AppendUnsigned(&cbor, wire::cursor_label::kScopes);
++  AppendArrayHeader(&cbor, scopes.size());
++
++  for (const ScopeState* scope : scopes) {
++    AppendMapHeader(&cbor, 5);
++
++    AppendUnsigned(
++        &cbor,
++        wire::cursor_label::scope::kRootEpoch);
++    AppendUnsigned(&cbor, service.root_epoch);
++
++    AppendUnsigned(
++        &cbor,
++        wire::cursor_label::scope::kScopeId);
++    AppendByteArray(&cbor, scope->scope_id);
++
++    AppendUnsigned(
++        &cbor,
++        wire::cursor_label::scope::kGeneration);
++    AppendUnsigned(&cbor, scope->generation);
++
++    AppendUnsigned(
++        &cbor,
++        wire::cursor_label::scope::kStateDigest);
++    AppendByteArray(&cbor, scope->state_digest);
++
++    AppendUnsigned(
++        &cbor,
++        wire::cursor_label::scope::kClientMaxObjectSize);
++    AppendUnsigned(&cbor, wire::kMaxCoseBytes);
++  }
++
++  if (cbor.size() > wire::kMaxCursorCborBytes) {
++    return std::nullopt;
++  }
++
++  std::string structured_field;
++  structured_field.reserve(
++      2 + ((cbor.size() + 2) / 3) * 4);
++
++  structured_field.push_back(':');
++  structured_field.append(base::Base64Encode(cbor));
++  structured_field.push_back(':');
++
++  if (structured_field.size() >
++      wire::kMaxCursorStructuredFieldBytes) {
++    return std::nullopt;
++  }
++
++  return structured_field;
++}
++
++}  // namespace network::freshness
+diff --git a/services/network/freshness/freshness_cursor.h b/services/network/freshness/freshness_cursor.h
+new file mode 100644
+index 0000000000..5e61809434
+--- /dev/null
++++ b/services/network/freshness/freshness_cursor.h
+@@ -0,0 +1,36 @@
++// Copyright 2026
++// Opportunistic DNS Freshness research prototype.
++
++#ifndef SERVICES_NETWORK_FRESHNESS_FRESHNESS_CURSOR_H_
++#define SERVICES_NETWORK_FRESHNESS_FRESHNESS_CURSOR_H_
++
++#include <optional>
++#include <string>
++#include <vector>
++
++#include "services/network/freshness/freshness_state_store.h"
++
++namespace network::freshness {
++
++// Builds the deterministic-CBOR request cursor and wraps it as an HTTP
++// Structured Field Byte Sequence:
++//
++//   :BASE64(CBOR):
++//
++// `scopes` MUST contain only scopes belonging to `service`.
++//
++// An empty scope list is valid and represents Freshness support during
++// DNSSEC-backed first admission:
++//
++//   service known
++//   Freshness supported
++//   no admitted scope cursor yet
++//
++// Returns nullopt if bounded cursor policy would be exceeded.
++std::optional<std::string> BuildFreshnessRequestField(
++    const ServiceState& service,
++    std::vector<const ScopeState*> scopes);
++
++}  // namespace network::freshness
++
++#endif  // SERVICES_NETWORK_FRESHNESS_FRESHNESS_CURSOR_H_
+diff --git a/services/network/freshness/freshness_processor.cc b/services/network/freshness/freshness_processor.cc
+new file mode 100644
+index 0000000000..0a546fb24f
+--- /dev/null
++++ b/services/network/freshness/freshness_processor.cc
+@@ -0,0 +1,1128 @@
++// Copyright 2026
++// Opportunistic DNS Freshness research prototype.
++
++#include "services/network/freshness/freshness_processor.h"
++#include "services/network/freshness/freshness_state_store.h"
++
++#include <algorithm>
++#include <array>
++#include <cstdint>
++#include <optional>
++#include <string>
++#include <string_view>
++#include <vector>
++
++#include "base/containers/span.h"
++#include "base/logging.h"
++#include "base/time/time.h"
++#include "components/cbor/reader.h"
++#include "components/cbor/writer.h"
++#include "net/base/ip_address.h"
++#include "net/base/ip_endpoint.h"
++#include "net/dns/host_cache.h"
++#include "net/dns/host_resolver.h"
++#include "net/http/http_response_headers.h"
++#include "net/http/structured_headers.h"
++#include "net/url_request/url_request.h"
++#include "net/url_request/url_request_context.h"
++#include "third_party/boringssl/src/include/openssl/curve25519.h"
++#include "third_party/boringssl/src/include/openssl/sha.h"
++
++namespace network::freshness {
++namespace {
++
++// ---------------------------------------------------------------------------
++// Lab profile.
++//
++// This first native Chromium prototype intentionally binds to the existing
++// reproducible real-world vector. DNSSEC discovery/root-key installation will
++// replace these constants in the later full integration.
++// ---------------------------------------------------------------------------
++
++constexpr size_t kMaxStructuredFieldBytes = 5466;
++constexpr size_t kMaxCoseBytes = 4096;
++
++constexpr std::array<uint8_t, 16> kKeyId = {
++    0xdf, 0x64, 0xde, 0x1a, 0xcc, 0xe6, 0xbe, 0x3d,
++    0x1a, 0x81, 0x99, 0x87, 0x42, 0x0b, 0x6d, 0xd9};
++
++constexpr std::array<uint8_t, 16> kOwnerWire = {
++    0x01, 0x61, 0x07, 0x73, 0x65, 0x72, 0x76, 0x69,
++    0x63, 0x65, 0x04, 0x74, 0x65, 0x73, 0x74, 0x00};
++
++constexpr int64_t kProtocolVersion = 1;
++
++// Experimental compact object-type values for this lab profile.
++// Gate-13 already uses 1=CHECKPOINT and 2=DELTA.
++// 3 is used here for the full Snapshot admission experiment.
++constexpr int64_t kDeltaObjectType = 2;
++constexpr int64_t kSnapshotObjectType = 3;
++
++constexpr int64_t kReplaceRrset = 1;
++constexpr int64_t kDnsClassIn = 1;
++constexpr int64_t kDnsTypeA = 1;
++
++bool Reject(std::string_view reason) {
++  LOG(ERROR) << "DNS_FRESHNESS_NATIVE REJECT=" << reason;
++  return false;
++}
++
++base::span<const uint8_t> AsSpan(const std::vector<uint8_t>& bytes) {
++  return base::as_byte_span(bytes);
++}
++
++base::span<const uint8_t> AsSpan(std::string_view bytes) {
++  return base::as_byte_span(bytes);
++}
++
++template <size_t N>
++bool BytesEqual(const std::vector<uint8_t>& actual,
++                const std::array<uint8_t, N>& expected) {
++  return actual.size() == expected.size() &&
++         std::equal(actual.begin(), actual.end(), expected.begin());
++}
++
++bool BytesEqual(base::span<const uint8_t> actual,
++                const std::vector<uint8_t>& expected) {
++  return actual.size() == expected.size() &&
++         std::equal(actual.begin(), actual.end(), expected.begin());
++}
++
++const cbor::Value* FindIntegerKey(const cbor::Value::MapValue& map,
++                                  int64_t wanted_key) {
++  for (const auto& entry : map) {
++    if (entry.first.is_integer() && entry.first.GetInteger() == wanted_key) {
++      return &entry.second;
++    }
++  }
++  return nullptr;
++}
++
++std::optional<int64_t> GetInteger(const cbor::Value::MapValue& map,
++                                  int64_t key) {
++  const cbor::Value* value = FindIntegerKey(map, key);
++  if (!value || !value->is_integer()) {
++    return std::nullopt;
++  }
++  return value->GetInteger();
++}
++
++const std::vector<uint8_t>* GetBytes(const cbor::Value::MapValue& map,
++                                     int64_t key) {
++  const cbor::Value* value = FindIntegerKey(map, key);
++  if (!value || !value->is_bytestring()) {
++    return nullptr;
++  }
++  return &value->GetBytestring();
++}
++
++const cbor::Value::ArrayValue* GetArray(const cbor::Value::MapValue& map,
++                                        int64_t key) {
++  const cbor::Value* value = FindIntegerKey(map, key);
++  if (!value || !value->is_array()) {
++    return nullptr;
++  }
++  return &value->GetArray();
++}
++
++bool IsDeterministicCbor(base::span<const uint8_t> original,
++                         const cbor::Value& parsed) {
++  auto encoded = cbor::Writer::Write(parsed);
++  return encoded.has_value() && BytesEqual(original, *encoded);
++}
++
++// ---------------------------------------------------------------------------
++// Minimal deterministic-CBOR encoder used independently to construct:
++//   1. COSE Sig_structure
++//   2. canonical DNS state for digest recomputation.
++//
++// This avoids trusting the signed to_digest without independently computing
++// the candidate state.
++// ---------------------------------------------------------------------------
++
++void AppendTypeAndLength(std::vector<uint8_t>* out,
++                         uint8_t major_type,
++                         uint64_t value) {
++  const uint8_t major = static_cast<uint8_t>(major_type << 5);
++
++  if (value < 24) {
++    out->push_back(static_cast<uint8_t>(major | value));
++    return;
++  }
++
++  if (value <= 0xff) {
++    out->push_back(static_cast<uint8_t>(major | 24));
++    out->push_back(static_cast<uint8_t>(value));
++    return;
++  }
++
++  if (value <= 0xffff) {
++    out->push_back(static_cast<uint8_t>(major | 25));
++    out->push_back(static_cast<uint8_t>((value >> 8) & 0xff));
++    out->push_back(static_cast<uint8_t>(value & 0xff));
++    return;
++  }
++
++  if (value <= 0xffffffffULL) {
++    out->push_back(static_cast<uint8_t>(major | 26));
++    for (int shift = 24; shift >= 0; shift -= 8) {
++      out->push_back(static_cast<uint8_t>((value >> shift) & 0xff));
++    }
++    return;
++  }
++
++  out->push_back(static_cast<uint8_t>(major | 27));
++  for (int shift = 56; shift >= 0; shift -= 8) {
++    out->push_back(static_cast<uint8_t>((value >> shift) & 0xff));
++  }
++}
++
++void AppendUnsigned(std::vector<uint8_t>* out, uint64_t value) {
++  AppendTypeAndLength(out, 0, value);
++}
++
++void AppendBytes(std::vector<uint8_t>* out, base::span<const uint8_t> value) {
++  AppendTypeAndLength(out, 2, value.size());
++  out->insert(out->end(), value.begin(), value.end());
++}
++
++void AppendText(std::vector<uint8_t>* out, std::string_view value) {
++  AppendTypeAndLength(out, 3, value.size());
++  out->insert(out->end(), value.begin(), value.end());
++}
++
++void AppendArrayHeader(std::vector<uint8_t>* out, uint64_t count) {
++  AppendTypeAndLength(out, 4, count);
++}
++
++void AppendMapHeader(std::vector<uint8_t>* out, uint64_t count) {
++  AppendTypeAndLength(out, 5, count);
++}
++
++std::array<uint8_t, SHA256_DIGEST_LENGTH> Sha256(
++    base::span<const uint8_t> bytes) {
++  std::array<uint8_t, SHA256_DIGEST_LENGTH> digest{};
++  SHA256(bytes.data(), bytes.size(), digest.data());
++  return digest;
++}
++
++std::vector<uint8_t> BuildSigStructure(
++    const std::vector<uint8_t>& protected_headers,
++    const std::vector<uint8_t>& payload) {
++  std::vector<uint8_t> out;
++
++  AppendArrayHeader(&out, 4);
++  AppendText(&out, "Signature1");
++  AppendBytes(&out, AsSpan(protected_headers));
++  AppendBytes(&out, base::span<const uint8_t>());
++  AppendBytes(&out, AsSpan(payload));
++
++  return out;
++}
++
++// Canonical scope state:
++//
++// {
++//   1: service_id,
++//   2: scope_id,
++//   3: [
++//        [
++//          owner_wire,
++//          1,
++//          [
++//            [ IN, A, ttl, [ IPv4-rdata ] ]
++//          ]
++//        ]
++//      ]
++// }
++std::vector<uint8_t> BuildCanonicalSingleAState(
++    uint64_t root_epoch,
++    const ServiceId& service_id,
++    const ScopeId& scope_id,
++    base::span<const uint8_t> ipv4_rdata,
++    uint64_t ttl) {
++  std::vector<uint8_t> out;
++
++  // Full v0.1 state identity for this single-A lab scope:
++  //
++  // {
++  //   0: protocol_version,
++  //   1: root_epoch,
++  //   2: service_id,
++  //   3: scope_id,
++  //   4: [
++  //        [
++  //          owner_wire,
++  //          1,  // owner exists
++  //          [
++  //            [ IN, A, ttl, [ IPv4-rdata ] ]
++  //          ]
++  //        ]
++  //      ]
++  // }
++  AppendMapHeader(&out, 5);
++
++  AppendUnsigned(&out, 0);
++  AppendUnsigned(&out, kProtocolVersion);
++
++  AppendUnsigned(&out, 1);
++  AppendUnsigned(&out, root_epoch);
++
++  AppendUnsigned(&out, 2);
++  AppendBytes(&out, base::span<const uint8_t>(service_id));
++
++  AppendUnsigned(&out, 3);
++  AppendBytes(&out, base::span<const uint8_t>(scope_id));
++
++  AppendUnsigned(&out, 4);
++  AppendArrayHeader(&out, 1);
++
++  AppendArrayHeader(&out, 3);
++  AppendBytes(&out, base::span<const uint8_t>(kOwnerWire));
++  AppendUnsigned(&out, 1);
++
++  AppendArrayHeader(&out, 1);
++  AppendArrayHeader(&out, 4);
++
++  AppendUnsigned(&out, kDnsClassIn);
++  AppendUnsigned(&out, kDnsTypeA);
++  AppendUnsigned(&out, ttl);
++
++  AppendArrayHeader(&out, 1);
++  AppendBytes(&out, ipv4_rdata);
++
++  return out;
++}
++
++bool ParseCanonicalSingleAState(
++    base::span<const uint8_t> raw,
++    uint64_t expected_root_epoch,
++    const ServiceId& expected_service_id,
++    const ScopeId& expected_scope_id,
++    uint32_t* ttl_out,
++    std::vector<uint8_t>* rdata_out) {
++  if (!ttl_out || !rdata_out) {
++    return false;
++  }
++
++  std::optional<cbor::Value> parsed = cbor::Reader::Read(raw);
++
++  if (!parsed.has_value() || !parsed->is_map() ||
++      !IsDeterministicCbor(raw, *parsed)) {
++    return false;
++  }
++
++  const auto& map = parsed->GetMap();
++
++  if (map.size() != 5) {
++    return false;
++  }
++
++  const auto version = GetInteger(map, 0);
++  const auto root_epoch = GetInteger(map, 1);
++  const auto* service_id = GetBytes(map, 2);
++  const auto* scope_id = GetBytes(map, 3);
++  const auto* nodes = GetArray(map, 4);
++
++  if (!version.has_value() || *version != kProtocolVersion ||
++      !root_epoch.has_value() || *root_epoch < 0 ||
++      static_cast<uint64_t>(*root_epoch) != expected_root_epoch ||
++      !service_id || !BytesEqual(*service_id, expected_service_id) ||
++      !scope_id || !BytesEqual(*scope_id, expected_scope_id) ||
++      !nodes || nodes->size() != 1) {
++    return false;
++  }
++
++  const cbor::Value& node_value = (*nodes)[0];
++
++  if (!node_value.is_array()) {
++    return false;
++  }
++
++  const auto& node = node_value.GetArray();
++
++  if (node.size() != 3 ||
++      !node[0].is_bytestring() ||
++      !node[1].is_integer() ||
++      !node[2].is_array() ||
++      !BytesEqual(node[0].GetBytestring(), kOwnerWire) ||
++      node[1].GetInteger() != 1) {
++    return false;
++  }
++
++  const auto& rrsets = node[2].GetArray();
++
++  if (rrsets.size() != 1 || !rrsets[0].is_array()) {
++    return false;
++  }
++
++  const auto& rr = rrsets[0].GetArray();
++
++  if (rr.size() != 4 ||
++      !rr[0].is_integer() ||
++      !rr[1].is_integer() ||
++      !rr[2].is_integer() ||
++      !rr[3].is_array() ||
++      rr[0].GetInteger() != kDnsClassIn ||
++      rr[1].GetInteger() != kDnsTypeA ||
++      rr[2].GetInteger() < 0 ||
++      rr[2].GetInteger() > 0xffffffffLL) {
++    return false;
++  }
++
++  const auto& rdatas = rr[3].GetArray();
++
++  if (rdatas.size() != 1 ||
++      !rdatas[0].is_bytestring() ||
++      rdatas[0].GetBytestring().size() != 4) {
++    return false;
++  }
++
++  *ttl_out = static_cast<uint32_t>(rr[2].GetInteger());
++  *rdata_out = rdatas[0].GetBytestring();
++  return true;
++}
++
++
++bool DigestMatches(const std::array<uint8_t, SHA256_DIGEST_LENGTH>& actual,
++                   const std::vector<uint8_t>& expected) {
++  return expected.size() == actual.size() &&
++         std::equal(actual.begin(), actual.end(), expected.begin());
++}
++
++}  // namespace
++
++bool ProcessFreshnessResponse(
++    net::URLRequest* request,
++    const net::HttpResponseHeaders* response_headers,
++    const net::IPEndPoint& remote_endpoint,
++    FreshnessStateStore* store) {
++  if (!request || !response_headers || !store) {
++    return false;
++  }
++
++  if (!request->url().SchemeIs("https") ||
++      request->url().host() != "a.service.test") {
++    return false;
++  }
++
++  std::optional<std::string> header =
++      response_headers->GetNormalizedHeader("dns-freshness-object");
++
++  // No Freshness object is normal opportunistic degradation.
++  if (!header.has_value()) {
++    return false;
++  }
++
++  if (header->size() > kMaxStructuredFieldBytes) {
++    return Reject("SF_OVERSIZE");
++  }
++
++  auto sf_item = net::structured_headers::ParseItem(*header);
++
++  if (!sf_item.has_value() ||
++      !sf_item->params.empty() ||
++      !sf_item->item.is_byte_sequence()) {
++    return Reject("SF_PARSE");
++  }
++
++  const std::string& cose_string = sf_item->item.GetString();
++
++  if (cose_string.empty() ||
++      cose_string.size() > kMaxCoseBytes) {
++    return Reject("COSE_SIZE");
++  }
++
++  const auto& nak =
++      request->isolation_info().network_anonymization_key();
++
++  const base::Time now = base::Time::Now();
++
++  const ServiceState* service =
++      store->FindService(request->url().host(), nak);
++
++  // Incoming objects derive authority only from DNSSEC-installed
++  // service state. The old hardcoded lab public key is no longer
++  // a trust source.
++  if (!service ||
++      !service->has_root_public_key ||
++      !service->IsRootAuthorizedAt(now)) {
++    return Reject("NO_AUTHORIZED_DNSSEC_ROOT");
++  }
++
++  base::span<const uint8_t> cose_raw = AsSpan(cose_string);
++
++  if (cose_raw[0] != 0xd2) {
++    return Reject("COSE_TAG18");
++  }
++
++  base::span<const uint8_t> cose_body = cose_raw.subspan<1>();
++
++  std::optional<cbor::Value> cose =
++      cbor::Reader::Read(cose_body);
++
++  if (!cose.has_value() || !cose->is_array()) {
++    return Reject("COSE_CBOR");
++  }
++
++  if (!IsDeterministicCbor(cose_body, *cose)) {
++    return Reject("COSE_NONDETERMINISTIC");
++  }
++
++  const auto& cose_array = cose->GetArray();
++
++  if (cose_array.size() != 4 ||
++      !cose_array[0].is_bytestring() ||
++      !cose_array[1].is_map() ||
++      !cose_array[2].is_bytestring() ||
++      !cose_array[3].is_bytestring()) {
++    return Reject("COSE_SHAPE");
++  }
++
++  if (!cose_array[1].GetMap().empty()) {
++    return Reject("COSE_UNPROTECTED");
++  }
++
++  const std::vector<uint8_t>& protected_bytes =
++      cose_array[0].GetBytestring();
++  const std::vector<uint8_t>& payload_bytes =
++      cose_array[2].GetBytestring();
++  const std::vector<uint8_t>& signature =
++      cose_array[3].GetBytestring();
++
++  if (signature.size() != ED25519_SIGNATURE_LEN) {
++    return Reject("SIGNATURE_LENGTH");
++  }
++
++  std::optional<cbor::Value> protected_value =
++      cbor::Reader::Read(AsSpan(protected_bytes));
++
++  if (!protected_value.has_value() ||
++      !protected_value->is_map()) {
++    return Reject("PROTECTED_CBOR");
++  }
++
++  if (!IsDeterministicCbor(
++          AsSpan(protected_bytes), *protected_value)) {
++    return Reject("PROTECTED_NONDETERMINISTIC");
++  }
++
++  const auto& protected_map = protected_value->GetMap();
++
++  const auto alg = GetInteger(protected_map, 1);
++  const std::vector<uint8_t>* protected_kid =
++      GetBytes(protected_map, 4);
++
++  if (!alg.has_value() || *alg != -19) {
++    return Reject("COSE_ALG");
++  }
++
++  // Experimental lab KID remains stable, but the verification key
++  // itself now comes from DNSSEC-authenticated discovery state.
++  if (!protected_kid ||
++      !BytesEqual(*protected_kid, kKeyId)) {
++    return Reject("COSE_KID");
++  }
++
++  std::vector<uint8_t> sig_structure =
++      BuildSigStructure(protected_bytes, payload_bytes);
++
++  if (ED25519_verify(
++          sig_structure.data(),
++          sig_structure.size(),
++          signature.data(),
++          service->root_public_key.data()) != 1) {
++    return Reject("ED25519_DNSSEC_ROOT");
++  }
++
++  LOG(ERROR)
++      << "DNS_FRESHNESS_NATIVE COSE_SIGNATURE=PASS"
++      << " TRUST=DNSSEC_ROOT";
++
++  std::optional<cbor::Value> payload =
++      cbor::Reader::Read(AsSpan(payload_bytes));
++
++  if (!payload.has_value() || !payload->is_map()) {
++    return Reject("PAYLOAD_CBOR");
++  }
++
++  if (!IsDeterministicCbor(
++          AsSpan(payload_bytes), *payload)) {
++    return Reject("PAYLOAD_NONDETERMINISTIC");
++  }
++
++  const auto& map = payload->GetMap();
++
++  const auto version = GetInteger(map, 0);
++  const auto object_type = GetInteger(map, 1);
++  const auto root_epoch = GetInteger(map, 2);
++  const auto* service_id = GetBytes(map, 3);
++  const auto* scope_id_bytes = GetBytes(map, 4);
++  const auto issued_at = GetInteger(map, 7);
++  const auto valid_until = GetInteger(map, 8);
++  const auto* payload_kid = GetBytes(map, 9);
++
++  if (!version.has_value() ||
++      *version != kProtocolVersion ||
++      !object_type.has_value() ||
++      !root_epoch.has_value() ||
++      *root_epoch < 0 ||
++      !service_id ||
++      !scope_id_bytes ||
++      scope_id_bytes->size() != ScopeId{}.size() ||
++      !issued_at.has_value() ||
++      !valid_until.has_value() ||
++      *issued_at <= 0 ||
++      *valid_until <= *issued_at ||
++      !payload_kid ||
++      !BytesEqual(*payload_kid, kKeyId) ||
++      *payload_kid != *protected_kid) {
++    return Reject("COMMON_FIELDS");
++  }
++
++  if (!BytesEqual(*service_id, service->service_id)) {
++    return Reject("SERVICE_ID");
++  }
++
++  if (static_cast<uint64_t>(*root_epoch) !=
++      service->root_epoch) {
++    return Reject("ROOT_EPOCH_BINDING");
++  }
++
++  const base::Time issued_time =
++      base::Time::UnixEpoch() + base::Seconds(*issued_at);
++  const base::Time valid_time =
++      base::Time::UnixEpoch() + base::Seconds(*valid_until);
++
++  if (now < issued_time) {
++    return Reject("ISSUED_IN_FUTURE");
++  }
++
++  if (now >= valid_time) {
++    return Reject("OBJECT_EXPIRED");
++  }
++
++  if (valid_time > service->root_not_after) {
++    return Reject("LEASE_EXCEEDS_ROOT");
++  }
++
++  ScopeId scope_id{};
++  std::copy(
++      scope_id_bytes->begin(),
++      scope_id_bytes->end(),
++      scope_id.begin());
++
++  // ============================================================
++  // SNAPSHOT: first/re-admission from DNS_BOOTSTRAP.
++  //
++  // Experimental additional compact fields:
++  //   15 admission_context
++  //   16 members descriptors
++  //   17 complete canonical scope-state CBOR bytes
++  // ============================================================
++  if (*object_type == kSnapshotObjectType) {
++    if (map.size() != 13) {
++      return Reject("SNAPSHOT_MAP_SIZE");
++    }
++
++    if (!service->scopes.empty()) {
++      return Reject("SNAPSHOT_WHILE_ACTIVE");
++    }
++
++    const auto generation = GetInteger(map, 5);
++    const auto* state_digest = GetBytes(map, 6);
++    const auto* admission_context = GetBytes(map, 15);
++    const auto* members = GetArray(map, 16);
++    const auto* complete_state = GetBytes(map, 17);
++
++    if (!generation.has_value() ||
++        *generation < 0 ||
++        !state_digest ||
++        state_digest->size() != SHA256_DIGEST_LENGTH ||
++        !admission_context ||
++        *admission_context != service->admission_context ||
++        !members ||
++        members->size() != 1 ||
++        !complete_state ||
++        complete_state->empty()) {
++      return Reject("SNAPSHOT_FIELDS");
++    }
++
++    // Explicit member descriptor must match the complete state.
++    const cbor::Value& member_desc_value = (*members)[0];
++
++    if (!member_desc_value.is_array()) {
++      return Reject("SNAPSHOT_MEMBER_DESCRIPTOR");
++    }
++
++    const auto& member_desc =
++        member_desc_value.GetArray();
++
++    if (member_desc.size() != 3 ||
++        !member_desc[0].is_bytestring() ||
++        !member_desc[1].is_integer() ||
++        !member_desc[2].is_integer() ||
++        !BytesEqual(
++            member_desc[0].GetBytestring(), kOwnerWire) ||
++        member_desc[1].GetInteger() != kDnsClassIn ||
++        member_desc[2].GetInteger() != kDnsTypeA) {
++      return Reject("SNAPSHOT_MEMBER_DESCRIPTOR");
++    }
++
++    uint32_t ttl = 0;
++    std::vector<uint8_t> rdata;
++
++    if (!ParseCanonicalSingleAState(
++            AsSpan(*complete_state),
++            service->root_epoch,
++            service->service_id,
++            scope_id,
++            &ttl,
++            &rdata)) {
++      return Reject("SNAPSHOT_COMPLETE_STATE");
++    }
++
++    std::vector<uint8_t> rebuilt_state =
++        BuildCanonicalSingleAState(
++            service->root_epoch,
++            service->service_id,
++            scope_id,
++            AsSpan(rdata),
++            ttl);
++
++    if (!BytesEqual(
++            AsSpan(*complete_state), rebuilt_state)) {
++      return Reject("SNAPSHOT_STATE_REENCODE");
++    }
++
++    const auto calculated_digest =
++        Sha256(AsSpan(rebuilt_state));
++
++    if (!DigestMatches(
++            calculated_digest, *state_digest)) {
++      return Reject("SNAPSHOT_DIGEST");
++    }
++
++    // In the initial single-endpoint lab admission, the signed
++    // complete state must describe the path Chromium actually used.
++    if (!remote_endpoint.address().IsIPv4() ||
++        !BytesEqual(
++            remote_endpoint.address().bytes().span(),
++            rdata)) {
++      return Reject("SNAPSHOT_PATH_MISMATCH");
++    }
++
++    ScopeState scope;
++    scope.scope_id = scope_id;
++    scope.generation =
++        static_cast<uint64_t>(*generation);
++    std::copy(
++        state_digest->begin(),
++        state_digest->end(),
++        scope.state_digest.begin());
++    scope.issued_at = issued_time;
++    scope.valid_until = valid_time;
++
++    MemberState member;
++    member.owner_wire.assign(
++        kOwnerWire.begin(), kOwnerWire.end());
++    member.rrtype =
++        static_cast<uint16_t>(kDnsTypeA);
++    member.rrclass =
++        static_cast<uint16_t>(kDnsClassIn);
++    member.kind = MemberStateKind::kPositive;
++    member.ttl = ttl;
++    member.rdata.push_back(rdata);
++    scope.members.push_back(std::move(member));
++
++    // Re-check authorization immediately before state mutation.
++    if (!service->IsRootAuthorizedAt(
++            base::Time::Now())) {
++      return Reject("ROOT_EXPIRED_BEFORE_COMMIT");
++    }
++
++    if (!store->CommitAuthorizedScope(
++            request->url().host(),
++            nak,
++            std::move(scope),
++            now,
++            base::TimeTicks::Now())) {
++      return Reject("SNAPSHOT_STATE_COMMIT");
++    }
++
++    LOG(ERROR)
++        << "DNS_FRESHNESS_NATIVE SNAPSHOT_ADMITTED=PASS"
++        << " GEN=" << *generation
++        << " ENDPOINT="
++        << remote_endpoint.address().ToString()
++        << " ROOT_EPOCH=" << *root_epoch;
++
++    return true;
++  }
++
++  // ============================================================
++  // DELTA: exact stateful ancestry against ACTIVE_AUTHORIZED.
++  // ============================================================
++  if (*object_type == kDeltaObjectType) {
++    if (map.size() != 13) {
++      return Reject("DELTA_MAP_SIZE");
++    }
++
++    const auto from_generation =
++        GetInteger(map, 10);
++    const auto* from_digest =
++        GetBytes(map, 11);
++    const auto to_generation =
++        GetInteger(map, 12);
++    const auto* to_digest =
++        GetBytes(map, 13);
++    const auto* operations =
++        GetArray(map, 14);
++
++    if (!from_generation.has_value() ||
++        *from_generation < 0 ||
++        !to_generation.has_value() ||
++        *to_generation < 0 ||
++        *to_generation <= *from_generation ||
++        !from_digest ||
++        from_digest->size() != SHA256_DIGEST_LENGTH ||
++        !to_digest ||
++        to_digest->size() != SHA256_DIGEST_LENGTH ||
++        !operations ||
++        operations->size() != 1) {
++      return Reject("DELTA_FIELDS");
++    }
++
++    const ScopeState* current =
++        store->FindScope(*service, scope_id);
++
++    if (!current ||
++        !current->IsAuthorizedAt(now)) {
++      return Reject("NO_ACTIVE_SCOPE");
++    }
++
++    const uint64_t incoming_from =
++        static_cast<uint64_t>(*from_generation);
++
++    if (incoming_from < current->generation) {
++      LOG(ERROR)
++          << "DNS_FRESHNESS_NATIVE STALE_DELTA=IGNORE"
++          << " LOCAL_GEN=" << current->generation
++          << " FROM_GEN=" << incoming_from;
++      return false;
++    }
++
++    if (incoming_from > current->generation) {
++      store->MarkRecoveryRequired(
++          request->url().host(), nak, scope_id);
++      return Reject("GENERATION_GAP");
++    }
++
++    if (!BytesEqual(
++            *from_digest, current->state_digest)) {
++      store->MarkRecoveryRequired(
++          request->url().host(), nak, scope_id);
++      return Reject("FROM_DIGEST_FORK");
++    }
++
++    LOG(ERROR)
++        << "DNS_FRESHNESS_NATIVE "
++           "FROM_GENERATION_DIGEST=PASS"
++        << " GEN=" << current->generation;
++
++    const cbor::Value& op_value =
++        (*operations)[0];
++
++    if (!op_value.is_array()) {
++      return Reject("OPERATION_SHAPE");
++    }
++
++    const auto& op = op_value.GetArray();
++
++    if (op.size() != 6 ||
++        !op[0].is_integer() ||
++        !op[1].is_bytestring() ||
++        !op[2].is_integer() ||
++        !op[3].is_integer() ||
++        !op[4].is_integer() ||
++        !op[5].is_array()) {
++      return Reject("REPLACE_SHAPE");
++    }
++
++    if (op[0].GetInteger() != kReplaceRrset ||
++        !BytesEqual(op[1].GetBytestring(), kOwnerWire) ||
++        op[2].GetInteger() != kDnsClassIn ||
++        op[3].GetInteger() != kDnsTypeA ||
++        op[4].GetInteger() < 0 ||
++        op[4].GetInteger() > 0xffffffffLL) {
++      return Reject("REPLACE_FIELDS");
++    }
++
++    const auto& rdata_values =
++        op[5].GetArray();
++
++    if (rdata_values.size() != 1 ||
++        !rdata_values[0].is_bytestring() ||
++        rdata_values[0].GetBytestring().size() != 4) {
++      return Reject("REPLACE_RDATA");
++    }
++
++    if (current->members.size() != 1 ||
++        current->members[0].kind !=
++            MemberStateKind::kPositive ||
++        current->members[0].rrclass !=
++            kDnsClassIn ||
++        current->members[0].rrtype !=
++            kDnsTypeA ||
++        current->members[0].owner_wire !=
++            std::vector<uint8_t>(
++                kOwnerWire.begin(), kOwnerWire.end()) ||
++        current->members[0].rdata.size() != 1 ||
++        current->members[0].rdata[0].size() != 4) {
++      return Reject("LOCAL_SCOPE_SHAPE");
++    }
++
++    const std::vector<uint8_t>& new_rdata =
++        rdata_values[0].GetBytestring();
++
++    ScopeState candidate = *current;
++    candidate.generation =
++        static_cast<uint64_t>(*to_generation);
++    candidate.issued_at = issued_time;
++    candidate.valid_until = valid_time;
++    candidate.members[0].ttl =
++        static_cast<uint32_t>(op[4].GetInteger());
++    candidate.members[0].rdata.clear();
++    candidate.members[0].rdata.push_back(new_rdata);
++
++    std::vector<uint8_t> candidate_raw =
++        BuildCanonicalSingleAState(
++            service->root_epoch,
++            service->service_id,
++            scope_id,
++            AsSpan(new_rdata),
++            candidate.members[0].ttl);
++
++    const auto calculated_to_digest =
++        Sha256(AsSpan(candidate_raw));
++
++    if (!DigestMatches(
++            calculated_to_digest, *to_digest)) {
++      return Reject("TO_DIGEST");
++    }
++
++    std::copy(
++        to_digest->begin(),
++        to_digest->end(),
++        candidate.state_digest.begin());
++
++    LOG(ERROR)
++        << "DNS_FRESHNESS_NATIVE REPLACE_RRSET=PASS";
++    LOG(ERROR)
++        << "DNS_FRESHNESS_NATIVE TO_DIGEST=PASS";
++
++    net::IPAddress new_address(
++        AsSpan(new_rdata));
++
++    if (!new_address.IsValid() ||
++        !new_address.IsIPv4()) {
++      return Reject("NEW_ADDRESS");
++    }
++
++    const std::vector<uint8_t> old_rdata =
++        current->members[0].rdata[0];
++    const uint32_t old_ttl =
++        current->members[0].ttl;
++
++    net::IPAddress old_address(
++        AsSpan(old_rdata));
++
++    const net::URLRequestContext* context =
++        request->context();
++
++    if (!context || !context->host_resolver()) {
++      return Reject("NO_HOST_RESOLVER");
++    }
++
++    net::HostCache* cache =
++        context->host_resolver()->GetHostCache();
++
++    if (!cache) {
++      return Reject("NO_HOST_CACHE");
++    }
++
++    // Last authorization check before any mutation.
++    if (!service->IsRootAuthorizedAt(
++            base::Time::Now())) {
++      return Reject("ROOT_EXPIRED_BEFORE_COMMIT");
++    }
++
++    // Stage 1: resolver cache.
++    if (!cache->UpdateActiveAddressForFreshness(
++            request->url().host(),
++            nak,
++            new_address,
++            base::TimeTicks::Now(),
++            base::Seconds(
++                candidate.members[0].ttl))) {
++      return Reject("NO_ACTIVE_CACHE_ENTRY");
++    }
++
++    // Stage 2: authoritative Freshness scope state.
++    //
++    // If this unexpectedly fails after the already-validated
++    // HostCache mutation, restore the old address immediately.
++    if (!store->CommitAuthorizedScope(
++            request->url().host(),
++            nak,
++            std::move(candidate),
++            now,
++            base::TimeTicks::Now())) {
++      const bool rolled_back =
++          cache->UpdateActiveAddressForFreshness(
++              request->url().host(),
++              nak,
++              old_address,
++              base::TimeTicks::Now(),
++              base::Seconds(old_ttl));
++
++      LOG(ERROR)
++          << "DNS_FRESHNESS_NATIVE "
++             "HOSTCACHE_ROLLBACK="
++          << (rolled_back ? "PASS" : "FAIL");
++
++      return Reject("SCOPE_COMMIT");
++    }
++
++    LOG(ERROR)
++        << "DNS_FRESHNESS_NATIVE COMMIT=PASS"
++        << " GEN=" << *to_generation
++        << " ENDPOINT=" << new_address.ToString()
++        << " ROOT_EPOCH=" << *root_epoch;
++
++    return true;
++  }
++
++  return Reject("UNSUPPORTED_OBJECT_TYPE");
++}
++
++bool ProcessDnssecFreshnessDiscovery(
++    const std::string& hostname,
++    const net::NetworkAnonymizationKey& network_anonymization_key,
++    const std::vector<uint8_t>& discovery,
++    FreshnessStateStore* store) {
++  auto reject = [](const char* reason) {
++    LOG(ERROR) << "DNS_FRESHNESS_NATIVE DISCOVERY_REJECT=" << reason;
++    return false;
++  };
++
++  // Experimental Native-v0.1 discovery labels.
++  constexpr int64_t kDiscoveryVersion = 0;
++  constexpr int64_t kDiscoveryServiceId = 1;
++  constexpr int64_t kDiscoveryAdmissionContext = 2;
++  constexpr int64_t kDiscoveryRootEpoch = 3;
++  constexpr int64_t kDiscoveryRootPublicKey = 4;
++  constexpr int64_t kDiscoveryRootNotAfter = 5;
++  constexpr int64_t kDiscoveryCapabilityFlags = 6;
++
++  constexpr size_t kMaxDiscoveryBytes = 4096;
++  constexpr int64_t kMaxUnixSeconds = 253402300799LL;
++
++  if (!store || hostname.empty() || discovery.empty() ||
++      discovery.size() > kMaxDiscoveryBytes) {
++    return reject("INPUT");
++  }
++
++  std::optional<cbor::Value> parsed =
++      cbor::Reader::Read(AsSpan(discovery));
++  if (!parsed.has_value() || !parsed->is_map()) {
++    return reject("CBOR");
++  }
++
++  if (!IsDeterministicCbor(AsSpan(discovery), *parsed)) {
++    return reject("NONDETERMINISTIC");
++  }
++
++  const auto& map = parsed->GetMap();
++  if (map.size() != 7) {
++    return reject("MAP_SIZE");
++  }
++
++  const auto version = GetInteger(map, kDiscoveryVersion);
++  const auto* service_id_bytes = GetBytes(map, kDiscoveryServiceId);
++  const auto* admission_context = GetBytes(map, kDiscoveryAdmissionContext);
++  const auto root_epoch = GetInteger(map, kDiscoveryRootEpoch);
++  const auto* root_public_key_bytes =
++      GetBytes(map, kDiscoveryRootPublicKey);
++  const auto root_not_after = GetInteger(map, kDiscoveryRootNotAfter);
++  const auto capability_flags =
++      GetInteger(map, kDiscoveryCapabilityFlags);
++
++  if (!version.has_value() || *version != kProtocolVersion) {
++    return reject("VERSION");
++  }
++
++  if (!service_id_bytes ||
++      service_id_bytes->size() != ServiceId{}.size()) {
++    return reject("SERVICE_ID");
++  }
++
++  if (!admission_context || admission_context->empty() ||
++      admission_context->size() > kMaxAdmissionContextBytes) {
++    return reject("ADMISSION_CONTEXT");
++  }
++
++  if (!root_epoch.has_value() || *root_epoch < 0) {
++    return reject("ROOT_EPOCH");
++  }
++
++  if (!root_public_key_bytes ||
++      root_public_key_bytes->size() != Ed25519PublicKey{}.size()) {
++    return reject("ROOT_PUBLIC_KEY");
++  }
++
++  if (!root_not_after.has_value() || *root_not_after <= 0 ||
++      *root_not_after > kMaxUnixSeconds) {
++    return reject("ROOT_NOT_AFTER");
++  }
++
++  if (!capability_flags.has_value() || *capability_flags != 0) {
++    return reject("CAPABILITY_FLAGS");
++  }
++
++  ServiceId service_id{};
++  std::copy(service_id_bytes->begin(),
++            service_id_bytes->end(),
++            service_id.begin());
++
++  Ed25519PublicKey root_public_key{};
++  std::copy(root_public_key_bytes->begin(),
++            root_public_key_bytes->end(),
++            root_public_key.begin());
++
++  const base::Time now = base::Time::Now();
++  const base::Time root_expiry =
++      base::Time::UnixEpoch() + base::Seconds(*root_not_after);
++
++  if (!store->InstallDnssecBootstrap(
++          hostname,
++          network_anonymization_key,
++          service_id,
++          static_cast<uint64_t>(*root_epoch),
++          std::vector<uint8_t>(
++              admission_context->begin(),
++              admission_context->end()),
++          root_public_key,
++          root_expiry,
++          now,
++          base::TimeTicks::Now())) {
++    return reject("STATE_INSTALL");
++  }
++
++  LOG(ERROR) << "DNS_FRESHNESS_NATIVE DISCOVERY_BOOTSTRAP=PASS"
++             << " HOST=" << hostname
++             << " ROOT_EPOCH=" << *root_epoch;
++  return true;
++}
++
++}  // namespace network::freshness
+diff --git a/services/network/freshness/freshness_processor.h b/services/network/freshness/freshness_processor.h
+new file mode 100644
+index 0000000000..c47dfa7b8d
+--- /dev/null
++++ b/services/network/freshness/freshness_processor.h
+@@ -0,0 +1,41 @@
++// Copyright 2026
++// Opportunistic DNS Freshness research prototype.
++
++#ifndef SERVICES_NETWORK_FRESHNESS_FRESHNESS_PROCESSOR_H_
++#define SERVICES_NETWORK_FRESHNESS_FRESHNESS_PROCESSOR_H_
++
++#include <cstdint>
++
++#include <string>
++#include <vector>
++
++namespace net {
++class NetworkAnonymizationKey;
++class HttpResponseHeaders;
++class IPEndPoint;
++class URLRequest;
++}  // namespace net
++
++namespace network::freshness {
++
++class FreshnessStateStore;
++
++bool ProcessDnssecFreshnessDiscovery(
++    const std::string& hostname,
++    const net::NetworkAnonymizationKey& network_anonymization_key,
++    const std::vector<uint8_t>& discovery,
++    FreshnessStateStore* store);
++
++// Processes the lab DNS-Freshness-Object response field.
++//
++// Returns true only when a signed Delta was completely validated and committed
++// to an already-active Chromium DNS cache entry.
++bool ProcessFreshnessResponse(
++    net::URLRequest* request,
++    const net::HttpResponseHeaders* response_headers,
++    const net::IPEndPoint& remote_endpoint,
++    FreshnessStateStore* store);
++
++}  // namespace network::freshness
++
++#endif  // SERVICES_NETWORK_FRESHNESS_FRESHNESS_PROCESSOR_H_
+diff --git a/services/network/freshness/freshness_state_store.cc b/services/network/freshness/freshness_state_store.cc
+new file mode 100644
+index 0000000000..f18bf6c188
+--- /dev/null
++++ b/services/network/freshness/freshness_state_store.cc
+@@ -0,0 +1,452 @@
++// Copyright 2026
++// Opportunistic DNS Freshness research prototype.
++
++#include "services/network/freshness/freshness_state_store.h"
++
++#include <algorithm>
++#include <utility>
++
++namespace network::freshness {
++
++bool ScopeState::IsAuthorizedAt(base::Time now) const {
++  return lifecycle == LifecycleState::kActiveAuthorized &&
++         !issued_at.is_null() &&
++         !valid_until.is_null() &&
++         valid_until > issued_at &&
++         now < valid_until;
++}
++
++bool OperationalKeyState::IsValidAt(
++    base::Time now,
++    uint64_t current_root_epoch) const {
++  return root_epoch == current_root_epoch &&
++         !not_before.is_null() &&
++         !not_after.is_null() &&
++         not_after > not_before &&
++         now >= not_before &&
++         now < not_after;
++}
++
++bool ServiceState::IsRootAuthorizedAt(base::Time now) const {
++  return has_root_public_key &&
++         !root_not_after.is_null() &&
++         !now.is_null() &&
++         now < root_not_after;
++}
++
++FreshnessStateStore::FreshnessStateStore() = default;
++FreshnessStateStore::~FreshnessStateStore() = default;
++
++bool FreshnessStateStore::SameServiceKey(
++    const ServiceState& service,
++    std::string_view hostname,
++    const net::NetworkAnonymizationKey& network_anonymization_key) {
++  return service.hostname == hostname &&
++         service.network_anonymization_key == network_anonymization_key;
++}
++
++ServiceState* FreshnessStateStore::FindService(
++    std::string_view hostname,
++    const net::NetworkAnonymizationKey& network_anonymization_key) {
++  auto it = std::find_if(
++      services_.begin(), services_.end(),
++      [&](const ServiceState& service) {
++        return SameServiceKey(
++            service, hostname, network_anonymization_key);
++      });
++
++  return it == services_.end() ? nullptr : &*it;
++}
++
++const ServiceState* FreshnessStateStore::FindService(
++    std::string_view hostname,
++    const net::NetworkAnonymizationKey& network_anonymization_key) const {
++  auto it = std::find_if(
++      services_.begin(), services_.end(),
++      [&](const ServiceState& service) {
++        return SameServiceKey(
++            service, hostname, network_anonymization_key);
++      });
++
++  return it == services_.end() ? nullptr : &*it;
++}
++
++ScopeState* FreshnessStateStore::FindScope(
++    ServiceState& service,
++    const ScopeId& scope_id) {
++  auto it = std::find_if(
++      service.scopes.begin(), service.scopes.end(),
++      [&](const ScopeState& scope) {
++        return scope.scope_id == scope_id;
++      });
++
++  return it == service.scopes.end() ? nullptr : &*it;
++}
++
++const ScopeState* FreshnessStateStore::FindScope(
++    const ServiceState& service,
++    const ScopeId& scope_id) const {
++  auto it = std::find_if(
++      service.scopes.begin(), service.scopes.end(),
++      [&](const ScopeState& scope) {
++        return scope.scope_id == scope_id;
++      });
++
++  return it == service.scopes.end() ? nullptr : &*it;
++}
++
++bool FreshnessStateStore::ScopeWithinBounds(const ScopeState& scope) {
++  if (scope.members.size() > kMaxMembersPerScope) {
++    return false;
++  }
++
++  for (const MemberState& member : scope.members) {
++    if (member.owner_wire.empty() || member.owner_wire.size() > 255) {
++      return false;
++    }
++
++    if (member.rdata.size() > kMaxRdataPerMember) {
++      return false;
++    }
++
++    if (member.kind != MemberStateKind::kPositive &&
++        !member.rdata.empty()) {
++      return false;
++    }
++
++    for (const std::vector<uint8_t>& rdata : member.rdata) {
++      if (rdata.size() > kMaxSingleRdataBytes) {
++        return false;
++      }
++    }
++  }
++
++  return true;
++}
++
++bool FreshnessStateStore::OperationalKeyWithinBounds(
++    const OperationalKeyState& key) {
++  return !key.key_id.empty() &&
++         key.key_id.size() <= 64 &&
++         !key.not_before.is_null() &&
++         !key.not_after.is_null() &&
++         key.not_after > key.not_before;
++}
++
++void FreshnessStateStore::EvictLeastRecentlyUsedService() {
++  if (services_.empty()) {
++    return;
++  }
++
++  auto it = std::min_element(
++      services_.begin(), services_.end(),
++      [](const ServiceState& a, const ServiceState& b) {
++        return a.last_used < b.last_used;
++      });
++
++  services_.erase(it);
++}
++
++void FreshnessStateStore::EvictLeastRecentlyUsedScope(
++    ServiceState* service) {
++  if (!service || service->scopes.empty()) {
++    return;
++  }
++
++  auto it = std::min_element(
++      service->scopes.begin(), service->scopes.end(),
++      [](const ScopeState& a, const ScopeState& b) {
++        return a.last_used < b.last_used;
++      });
++
++  service->scopes.erase(it);
++}
++
++bool FreshnessStateStore::InstallDnssecBootstrap(
++    std::string hostname,
++    const net::NetworkAnonymizationKey& network_anonymization_key,
++    const ServiceId& service_id,
++    uint64_t root_epoch,
++    std::vector<uint8_t> admission_context,
++    const Ed25519PublicKey& root_public_key,
++    base::Time root_not_after,
++    base::Time now,
++    base::TimeTicks now_ticks) {
++  if (hostname.empty() ||
++      admission_context.empty() ||
++      admission_context.size() > kMaxAdmissionContextBytes ||
++      root_not_after.is_null() ||
++      now.is_null() ||
++      root_not_after <= now) {
++    return false;
++  }
++
++  ServiceState* existing =
++      FindService(hostname, network_anonymization_key);
++
++  if (!existing) {
++    if (services_.size() >= kMaxFreshnessServices) {
++      EvictLeastRecentlyUsedService();
++    }
++
++    ServiceState service;
++    service.hostname = std::move(hostname);
++    service.network_anonymization_key = network_anonymization_key;
++    service.service_id = service_id;
++    service.root_epoch = root_epoch;
++    service.admission_context = std::move(admission_context);
++    service.root_public_key = root_public_key;
++    service.has_root_public_key = true;
++    service.root_not_after = root_not_after;
++    service.lifecycle = LifecycleState::kDnsBootstrap;
++    service.last_used = now_ticks;
++
++    services_.push_back(std::move(service));
++    return true;
++  }
++
++  if (root_epoch < existing->root_epoch) {
++    return false;
++  }
++
++  const bool trust_or_view_changed =
++      root_epoch > existing->root_epoch ||
++      existing->service_id != service_id ||
++      existing->admission_context != admission_context ||
++      existing->root_public_key != root_public_key;
++
++  if (trust_or_view_changed) {
++    // DNSSEC-authenticated view/root change invalidates old Freshness state.
++    existing->scopes.clear();
++    existing->operational_keys.clear();
++  }
++
++  existing->service_id = service_id;
++  existing->root_epoch = root_epoch;
++  existing->admission_context = std::move(admission_context);
++  existing->root_public_key = root_public_key;
++  existing->has_root_public_key = true;
++  existing->root_not_after = root_not_after;
++  existing->last_used = now_ticks;
++
++  if (existing->scopes.empty()) {
++    // DNSSEC has just re-established current discovery/trust state.
++    // An empty Freshness cursor may now request first/re-admission Snapshot.
++    existing->lifecycle = LifecycleState::kDnsBootstrap;
++  }
++
++  return true;
++}
++
++bool FreshnessStateStore::InstallOperationalKey(
++    std::string_view hostname,
++    const net::NetworkAnonymizationKey& network_anonymization_key,
++    OperationalKeyState key,
++    base::Time now) {
++  ServiceState* service =
++      FindService(hostname, network_anonymization_key);
++
++  if (!service ||
++      !service->IsRootAuthorizedAt(now) ||
++      !OperationalKeyWithinBounds(key) ||
++      key.root_epoch != service->root_epoch ||
++      !key.IsValidAt(now, service->root_epoch)) {
++    return false;
++  }
++
++  auto it = std::find_if(
++      service->operational_keys.begin(),
++      service->operational_keys.end(),
++      [&](const OperationalKeyState& existing) {
++        return existing.key_id == key.key_id;
++      });
++
++  if (it != service->operational_keys.end()) {
++    *it = std::move(key);
++    return true;
++  }
++
++  if (service->operational_keys.size() >=
++      kMaxOperationalKeysPerService) {
++    return false;
++  }
++
++  service->operational_keys.push_back(std::move(key));
++  return true;
++}
++
++bool FreshnessStateStore::CommitAuthorizedScope(
++    std::string_view hostname,
++    const net::NetworkAnonymizationKey& network_anonymization_key,
++    ScopeState scope,
++    base::Time now,
++    base::TimeTicks now_ticks) {
++  ServiceState* service =
++      FindService(hostname, network_anonymization_key);
++
++  if (!service ||
++      !ScopeWithinBounds(scope) ||
++      scope.issued_at.is_null() ||
++      scope.valid_until.is_null() ||
++      scope.valid_until <= scope.issued_at ||
++      now >= scope.valid_until) {
++    return false;
++  }
++
++  scope.lifecycle = LifecycleState::kActiveAuthorized;
++  scope.last_used = now_ticks;
++
++  ScopeState* existing = FindScope(*service, scope.scope_id);
++
++  if (existing) {
++    *existing = std::move(scope);
++  } else {
++    if (service->scopes.size() >= kMaxScopesPerService) {
++      // Capacity eviction explicitly terminates update interest.
++      EvictLeastRecentlyUsedScope(service);
++    }
++
++    service->scopes.push_back(std::move(scope));
++  }
++
++  service->lifecycle = LifecycleState::kActiveAuthorized;
++  service->last_used = now_ticks;
++
++  return true;
++}
++
++bool FreshnessStateStore::MarkRecoveryRequired(
++    std::string_view hostname,
++    const net::NetworkAnonymizationKey& network_anonymization_key,
++    const ScopeId& scope_id) {
++  ServiceState* service =
++      FindService(hostname, network_anonymization_key);
++
++  if (!service) {
++    return false;
++  }
++
++  ScopeState* scope = FindScope(*service, scope_id);
++
++  if (!scope || scope->lifecycle == LifecycleState::kInactive) {
++    return false;
++  }
++
++  scope->lifecycle = LifecycleState::kRecoveryRequired;
++  service->lifecycle = LifecycleState::kRecoveryRequired;
++
++  return true;
++}
++
++bool FreshnessStateStore::EvictScope(
++    std::string_view hostname,
++    const net::NetworkAnonymizationKey& network_anonymization_key,
++    const ScopeId& scope_id) {
++  ServiceState* service =
++      FindService(hostname, network_anonymization_key);
++
++  if (!service) {
++    return false;
++  }
++
++  auto it = std::find_if(
++      service->scopes.begin(), service->scopes.end(),
++      [&](const ScopeState& scope) {
++        return scope.scope_id == scope_id;
++      });
++
++  if (it == service->scopes.end()) {
++    return false;
++  }
++
++  service->scopes.erase(it);
++
++  if (service->scopes.empty()) {
++    service->lifecycle = LifecycleState::kActiveUnassured;
++  }
++
++  return true;
++}
++
++bool FreshnessStateStore::EvictService(
++    std::string_view hostname,
++    const net::NetworkAnonymizationKey& network_anonymization_key) {
++  auto it = std::find_if(
++      services_.begin(), services_.end(),
++      [&](const ServiceState& service) {
++        return SameServiceKey(
++            service, hostname, network_anonymization_key);
++      });
++
++  if (it == services_.end()) {
++    return false;
++  }
++
++  services_.erase(it);
++  return true;
++}
++
++std::vector<const ScopeState*>
++FreshnessStateStore::ActiveScopesForRequest(
++    std::string_view hostname,
++    const net::NetworkAnonymizationKey& network_anonymization_key,
++    base::Time now,
++    base::TimeTicks now_ticks) {
++  std::vector<const ScopeState*> result;
++
++  ServiceState* service =
++      FindService(hostname, network_anonymization_key);
++
++  if (!service || !service->IsRootAuthorizedAt(now)) {
++    return result;
++  }
++
++  service->last_used = now_ticks;
++
++  for (ScopeState& scope : service->scopes) {
++    if (!scope.IsAuthorizedAt(now)) {
++      continue;
++    }
++
++    scope.last_used = now_ticks;
++    result.push_back(&scope);
++  }
++
++  return result;
++}
++
++void FreshnessStateStore::ExpireLeases(base::Time now) {
++  for (ServiceState& service : services_) {
++    if (service.has_root_public_key &&
++        !service.IsRootAuthorizedAt(now)) {
++      service.scopes.clear();
++      service.operational_keys.clear();
++      service.lifecycle = LifecycleState::kActiveUnassured;
++      continue;
++    }
++
++    bool any_authorized = false;
++
++    for (ScopeState& scope : service.scopes) {
++      if (scope.lifecycle == LifecycleState::kActiveAuthorized &&
++          !scope.IsAuthorizedAt(now)) {
++        scope.lifecycle = LifecycleState::kActiveUnassured;
++      }
++
++      if (scope.IsAuthorizedAt(now)) {
++        any_authorized = true;
++      }
++    }
++
++    if (!any_authorized &&
++        service.lifecycle == LifecycleState::kActiveAuthorized) {
++      service.lifecycle = LifecycleState::kActiveUnassured;
++    }
++  }
++}
++
++void FreshnessStateStore::Clear() {
++  services_.clear();
++}
++
++}  // namespace network::freshness
+diff --git a/services/network/freshness/freshness_state_store.h b/services/network/freshness/freshness_state_store.h
+new file mode 100644
+index 0000000000..dc25b98d38
+--- /dev/null
++++ b/services/network/freshness/freshness_state_store.h
+@@ -0,0 +1,234 @@
++// Copyright 2026
++// Opportunistic DNS Freshness research prototype.
++
++#ifndef SERVICES_NETWORK_FRESHNESS_FRESHNESS_STATE_STORE_H_
++#define SERVICES_NETWORK_FRESHNESS_FRESHNESS_STATE_STORE_H_
++
++#include <array>
++#include <cstddef>
++#include <cstdint>
++#include <string>
++#include <string_view>
++#include <vector>
++
++#include "base/time/time.h"
++#include "net/base/network_anonymization_key.h"
++
++namespace network::freshness {
++
++constexpr size_t kFreshnessServiceIdBytes = 16;
++constexpr size_t kFreshnessScopeIdBytes = 16;
++constexpr size_t kFreshnessDigestBytes = 32;
++constexpr size_t kFreshnessEd25519PublicKeyBytes = 32;
++
++constexpr size_t kMaxFreshnessServices = 64;
++constexpr size_t kMaxScopesPerService = 32;
++constexpr size_t kMaxMembersPerScope = 64;
++constexpr size_t kMaxRdataPerMember = 32;
++constexpr size_t kMaxSingleRdataBytes = 4096;
++constexpr size_t kMaxAdmissionContextBytes = 256;
++constexpr size_t kMaxOperationalKeysPerService = 8;
++
++using ServiceId = std::array<uint8_t, kFreshnessServiceIdBytes>;
++using ScopeId = std::array<uint8_t, kFreshnessScopeIdBytes>;
++using StateDigest = std::array<uint8_t, kFreshnessDigestBytes>;
++using Ed25519PublicKey =
++    std::array<uint8_t, kFreshnessEd25519PublicKeyBytes>;
++
++enum class LifecycleState {
++  kInactive,
++  kDnsBootstrap,
++  kActiveUnassured,
++  kActiveAuthorized,
++  kRecoveryRequired,
++};
++
++enum class MemberStateKind {
++  kPositive,
++  kNoData,
++  kNxDomain,
++};
++
++// Explicit immutable scope member.
++//
++// The member identity is owner/type/class.
++// `kind` describes its current DNS state.
++//
++// POSITIVE:
++//   ttl + rdata[] carry current RRset.
++//
++// NODATA / NXDOMAIN:
++//   ttl is the signed negative-cache lifetime and rdata[] is empty.
++struct MemberState {
++  std::vector<uint8_t> owner_wire;
++  uint16_t rrtype = 0;
++  uint16_t rrclass = 0;
++
++  MemberStateKind kind = MemberStateKind::kPositive;
++
++  uint32_t ttl = 0;
++  std::vector<std::vector<uint8_t>> rdata;
++
++  bool operator==(const MemberState&) const = default;
++};
++
++struct ScopeState {
++  ScopeId scope_id{};
++
++  uint64_t generation = 0;
++  StateDigest state_digest{};
++
++  base::Time issued_at;
++  base::Time valid_until;
++
++  LifecycleState lifecycle = LifecycleState::kInactive;
++
++  // Complete CURRENT state only.
++  // Client-side historical generations are intentionally not retained.
++  std::vector<MemberState> members;
++
++  base::TimeTicks last_used;
++
++  bool IsAuthorizedAt(base::Time now) const;
++};
++
++struct OperationalKeyState {
++  std::vector<uint8_t> key_id;
++  Ed25519PublicKey public_key{};
++
++  uint64_t root_epoch = 0;
++
++  base::Time not_before;
++  base::Time not_after;
++
++  bool IsValidAt(base::Time now, uint64_t current_root_epoch) const;
++};
++
++// DNSSEC-authenticated service/view state for one NAK partition.
++//
++// Multiple Freshness scopes may belong to one service.
++struct ServiceState {
++  std::string hostname;
++  net::NetworkAnonymizationKey network_anonymization_key;
++
++  ServiceId service_id{};
++
++  uint64_t root_epoch = 0;
++
++  // Opaque DNSSEC-authenticated view binding.
++  std::vector<uint8_t> admission_context;
++
++  Ed25519PublicKey root_public_key{};
++  bool has_root_public_key = false;
++
++  // DNSSEC-authenticated expiry of the Freshness root trust anchor.
++  // This is a cryptographic trust bound, not a DNS freshness TTL.
++  base::Time root_not_after;
++
++  bool IsRootAuthorizedAt(base::Time now) const;
++
++  std::vector<OperationalKeyState> operational_keys;
++  std::vector<ScopeState> scopes;
++
++  LifecycleState lifecycle = LifecycleState::kInactive;
++
++  base::TimeTicks last_used;
++};
++
++// Per-NetworkContext bounded Freshness state.
++//
++// State is partitioned by NetworkAnonymizationKey.
++// Eviction deletes active interest: a later generation jump after eviction is
++// therefore fresh admission, not a missed-update fault.
++class FreshnessStateStore {
++ public:
++  FreshnessStateStore();
++  ~FreshnessStateStore();
++
++  FreshnessStateStore(const FreshnessStateStore&) = delete;
++  FreshnessStateStore& operator=(const FreshnessStateStore&) = delete;
++
++  ServiceState* FindService(
++      std::string_view hostname,
++      const net::NetworkAnonymizationKey& network_anonymization_key);
++
++  const ServiceState* FindService(
++      std::string_view hostname,
++      const net::NetworkAnonymizationKey& network_anonymization_key) const;
++
++  ScopeState* FindScope(ServiceState& service, const ScopeId& scope_id);
++  const ScopeState* FindScope(const ServiceState& service,
++                              const ScopeId& scope_id) const;
++
++  // Installs DNSSEC-authenticated discovery/root material.
++  //
++  // Higher root_epoch or changed admission_context invalidates old scoped
++  // Freshness state. Lower root_epoch is rejected.
++  bool InstallDnssecBootstrap(
++      std::string hostname,
++      const net::NetworkAnonymizationKey& network_anonymization_key,
++      const ServiceId& service_id,
++      uint64_t root_epoch,
++      std::vector<uint8_t> admission_context,
++      const Ed25519PublicKey& root_public_key,
++      base::Time root_not_after,
++      base::Time now,
++      base::TimeTicks now_ticks);
++
++  bool InstallOperationalKey(
++      std::string_view hostname,
++      const net::NetworkAnonymizationKey& network_anonymization_key,
++      OperationalKeyState key,
++      base::Time now);
++
++  // Snapshot admission or fully validated replacement.
++  bool CommitAuthorizedScope(
++      std::string_view hostname,
++      const net::NetworkAnonymizationKey& network_anonymization_key,
++      ScopeState scope,
++      base::Time now,
++      base::TimeTicks now_ticks);
++
++  bool MarkRecoveryRequired(
++      std::string_view hostname,
++      const net::NetworkAnonymizationKey& network_anonymization_key,
++      const ScopeId& scope_id);
++
++  bool EvictScope(
++      std::string_view hostname,
++      const net::NetworkAnonymizationKey& network_anonymization_key,
++      const ScopeId& scope_id);
++
++  bool EvictService(
++      std::string_view hostname,
++      const net::NetworkAnonymizationKey& network_anonymization_key);
++
++  std::vector<const ScopeState*> ActiveScopesForRequest(
++      std::string_view hostname,
++      const net::NetworkAnonymizationKey& network_anonymization_key,
++      base::Time now,
++      base::TimeTicks now_ticks);
++
++  void ExpireLeases(base::Time now);
++  void Clear();
++
++  size_t service_count() const { return services_.size(); }
++
++ private:
++  static bool SameServiceKey(
++      const ServiceState& service,
++      std::string_view hostname,
++      const net::NetworkAnonymizationKey& network_anonymization_key);
++
++  static bool ScopeWithinBounds(const ScopeState& scope);
++  static bool OperationalKeyWithinBounds(const OperationalKeyState& key);
++
++  void EvictLeastRecentlyUsedService();
++  static void EvictLeastRecentlyUsedScope(ServiceState* service);
++
++  std::vector<ServiceState> services_;
++};
++
++}  // namespace network::freshness
++
++#endif  // SERVICES_NETWORK_FRESHNESS_FRESHNESS_STATE_STORE_H_
+diff --git a/services/network/freshness/freshness_wire_profile.h b/services/network/freshness/freshness_wire_profile.h
+new file mode 100644
+index 0000000000..3058dd99cc
+--- /dev/null
++++ b/services/network/freshness/freshness_wire_profile.h
+@@ -0,0 +1,145 @@
++// Copyright 2026
++// Opportunistic DNS Freshness research prototype.
++//
++// Experimental native-v0.1 wire profile.
++// These values preserve the Gate-13 experimental response labels.
++// They are NOT IANA allocations.
++
++#ifndef SERVICES_NETWORK_FRESHNESS_FRESHNESS_WIRE_PROFILE_H_
++#define SERVICES_NETWORK_FRESHNESS_FRESHNESS_WIRE_PROFILE_H_
++
++#include <cstddef>
++#include <cstdint>
++
++namespace network::freshness::wire {
++
++constexpr uint64_t kProtocolVersion = 1;
++
++// Experimental HTTP field names. These are Native-v0.1 PoC names and are not
++// IANA allocations.
++inline constexpr char kRequestCursorHeaderName[] = "dns-freshness-cursor";
++
++constexpr size_t kMaxCoseBytes = 4096;
++constexpr size_t kMaxDeltaOperations = 64;
++constexpr size_t kMaxCursorScopes = 32;
++constexpr size_t kMaxCborDepth = 32;
++
++// Request-cursor bounds.
++// 4096 raw CBOR bytes expand to at most 5464 Base64 characters,
++// plus the two Structured-Field byte-sequence delimiters.
++constexpr size_t kMaxCursorCborBytes = 4096;
++constexpr size_t kMaxCursorStructuredFieldBytes = 5466;
++
++enum class ObjectType : uint64_t {
++  // Gate-13 compatibility.
++  kCheckpoint = 1,
++  kDelta = 2,
++
++  // Native full-stack extensions.
++  kSnapshot = 3,
++  kResyncRequired = 4,
++  kOperationalKeyAuthorization = 5,
++};
++
++enum class DeltaOperation : uint64_t {
++  // Preserve existing native PoC REPLACE value.
++  kReplaceRrset = 1,
++
++  kAddRrset = 2,
++  kRemoveRrset = 3,
++  kRemoveName = 4,
++  kCreateNameState = 5,
++};
++
++// Signed response-object labels.
++//
++// Gate-13 labels 0..14 remain byte-compatible.
++namespace object_label {
++
++constexpr uint64_t kVersion = 0;
++constexpr uint64_t kObjectType = 1;
++constexpr uint64_t kRootEpoch = 2;
++constexpr uint64_t kServiceId = 3;
++constexpr uint64_t kScopeId = 4;
++
++constexpr uint64_t kGeneration = 5;
++constexpr uint64_t kStateDigest = 6;
++constexpr uint64_t kIssuedAt = 7;
++constexpr uint64_t kValidUntil = 8;
++constexpr uint64_t kKeyId = 9;
++
++constexpr uint64_t kFromGeneration = 10;
++constexpr uint64_t kFromDigest = 11;
++constexpr uint64_t kToGeneration = 12;
++constexpr uint64_t kToDigest = 13;
++constexpr uint64_t kOperations = 14;
++
++// Full-stack extensions.
++constexpr uint64_t kAdmissionContext = 15;
++constexpr uint64_t kMembers = 16;
++constexpr uint64_t kCompleteScopeState = 17;
++
++constexpr uint64_t kReason = 18;
++constexpr uint64_t kHeadGeneration = 19;
++constexpr uint64_t kHeadDigest = 20;
++
++constexpr uint64_t kAuthorizedKeyId = 21;
++constexpr uint64_t kAuthorizedPublicKey = 22;
++constexpr uint64_t kKeyNotBefore = 23;
++constexpr uint64_t kKeyNotAfter = 24;
++constexpr uint64_t kKeyAlgorithm = 25;
++
++}  // namespace object_label
++
++// Delta-operation map labels.
++namespace operation_label {
++
++constexpr uint64_t kOperation = 0;
++constexpr uint64_t kOwner = 1;
++constexpr uint64_t kType = 2;
++constexpr uint64_t kClass = 3;
++constexpr uint64_t kTtl = 4;
++constexpr uint64_t kRdata = 5;
++constexpr uint64_t kNegativeTtl = 6;
++constexpr uint64_t kMembers = 7;
++
++}  // namespace operation_label
++
++// Request cursor.
++//
++// Cursor is not a signed Authority object. The HTTP field already identifies
++// its direction, so it has its own compact deterministic-CBOR namespace.
++//
++// {
++//   0: version,
++//   1: service_id,
++//   2: [
++//        {
++//          0: root_epoch,
++//          1: scope_id,
++//          2: generation,
++//          3: state_digest,
++//          4: client_max_object_size OPTIONAL
++//        },
++//        ...
++//      ]
++// }
++namespace cursor_label {
++
++constexpr uint64_t kVersion = 0;
++constexpr uint64_t kServiceId = 1;
++constexpr uint64_t kScopes = 2;
++
++namespace scope {
++constexpr uint64_t kRootEpoch = 0;
++constexpr uint64_t kScopeId = 1;
++constexpr uint64_t kGeneration = 2;
++constexpr uint64_t kStateDigest = 3;
++constexpr uint64_t kClientMaxObjectSize = 4;
++}  // namespace scope
++
++}  // namespace cursor_label
++
++}  // namespace network::freshness::wire
++
++#endif  // SERVICES_NETWORK_FRESHNESS_FRESHNESS_WIRE_PROFILE_H_
+diff --git a/services/network/network_context.h b/services/network/network_context.h
+index 234a90677a..7f19664681 100644
+--- a/services/network/network_context.h
++++ b/services/network/network_context.h
+@@ -78,6 +78,7 @@
+ #include "services/network/resource_scheduler/resource_scheduler.h"
+ #include "services/network/restricted_cookie_manager.h"
+ #include "services/network/socket_factory.h"
++#include "services/network/freshness/freshness_state_store.h"
+ #include "services/network/url_request_context_owner.h"
+ #include "services/network/web_bundle/web_bundle_manager.h"
+ #include "third_party/abseil-cpp/absl/container/flat_hash_map.h"
+@@ -206,6 +207,13 @@ class COMPONENT_EXPORT(NETWORK_SERVICE) NetworkContext
+ 
+   net::URLRequestContext* url_request_context() { return url_request_context_; }
+ 
++  freshness::FreshnessStateStore* freshness_state_store() {
++    return &freshness_state_store_;
++  }
++  const freshness::FreshnessStateStore* freshness_state_store() const {
++    return &freshness_state_store_;
++  }
++
+ #if BUILDFLAG(ENABLE_WEBSOCKETS)
+   // Creates synthetic WEBSOCKET_ALIVE NetLog entries for pre-existing
+   // WebSocket connections. Delegates to WebSocketFactory.
+@@ -912,6 +920,11 @@ class COMPONENT_EXPORT(NETWORK_SERVICE) NetworkContext
+   std::unique_ptr<domain_reliability::DomainReliabilityMonitor>
+       domain_reliability_monitor_;
+ 
++  // Per-NetworkContext Opportunistic DNS Freshness state.
++  // Declared before URLRequestContextOwner so it outlives the NetworkDelegate
++  // owned by the URLRequestContext.
++  freshness::FreshnessStateStore freshness_state_store_;
++
+   // Holds owning pointer to |url_request_context_|. Will contain a nullptr for
+   // |url_request_context| when the NetworkContextImpl doesn't own its own
+   // URLRequestContext.
+diff --git a/services/network/network_service_network_delegate.cc b/services/network/network_service_network_delegate.cc
+index fa98a19c9f..015d192e34 100644
+--- a/services/network/network_service_network_delegate.cc
++++ b/services/network/network_service_network_delegate.cc
+@@ -3,15 +3,21 @@
+ // found in the LICENSE file.
+ 
+ #include "services/network/network_service_network_delegate.h"
++#include "services/network/freshness/freshness_wire_profile.h"
++#include "net/http/http_request_headers.h"
++#include "services/network/freshness/freshness_cursor.h"
++#include "services/network/freshness/freshness_processor.h"
+ 
+ #include <algorithm>
+ #include <optional>
+ #include <string>
++#include <vector>
+ 
+ #include "base/debug/crash_logging.h"
+ #include "base/debug/dump_without_crashing.h"
+ #include "base/functional/bind.h"
+ #include "base/strings/utf_string_conversions.h"
++#include "base/time/time.h"
+ #include "base/types/optional_ref.h"
+ #include "base/types/optional_util.h"
+ #include "build/build_config.h"
+@@ -43,6 +49,60 @@
+ namespace network {
+ 
+ namespace {
++
++std::optional<std::string> BuildFreshnessCursorForRequest(
++    NetworkContext* network_context,
++    net::URLRequest* request) {
++  if (!network_context || !request || !request->url().SchemeIs("https")) {
++    return std::nullopt;
++  }
++
++  freshness::FreshnessStateStore* store =
++      network_context->freshness_state_store();
++
++  const base::Time now = base::Time::Now();
++  const base::TimeTicks now_ticks = base::TimeTicks::Now();
++
++  // Expired authorization must stop opportunistic Freshness before deciding
++  // whether this natural application request may carry a cursor.
++  store->ExpireLeases(now);
++
++  const auto hostname = request->url().host();
++  const net::NetworkAnonymizationKey& nak =
++      request->isolation_info().network_anonymization_key();
++
++  freshness::ServiceState* service = store->FindService(hostname, nak);
++  if (!service) {
++    return std::nullopt;
++  }
++
++  switch (service->lifecycle) {
++    case freshness::LifecycleState::kDnsBootstrap:
++      // DNSSEC has authenticated service/root/view state, but no scope has
++      // yet been admitted. An empty cursor permits Snapshot admission on this
++      // natural application request.
++      return freshness::BuildFreshnessRequestField(*service, {});
++
++    case freshness::LifecycleState::kActiveAuthorized: {
++      std::vector<const freshness::ScopeState*> scopes =
++          store->ActiveScopesForRequest(hostname, nak, now, now_ticks);
++      if (scopes.empty()) {
++        return std::nullopt;
++      }
++
++      return freshness::BuildFreshnessRequestField(
++          *service, std::move(scopes));
++    }
++
++    case freshness::LifecycleState::kInactive:
++    case freshness::LifecycleState::kActiveUnassured:
++    case freshness::LifecycleState::kRecoveryRequired:
++      return std::nullopt;
++  }
++
++  return std::nullopt;
++}
++
+ // Returns the permissions policy saved for the request in the loader. The
+ // loader should outlive the caller of this method.
+ base::optional_ref<const network::PermissionsPolicy> GetPermissionsPolicy(
+@@ -104,13 +164,38 @@ int NetworkServiceNetworkDelegate::OnBeforeURLRequest(
+   return net::OK;
+ }
+ 
++void NetworkServiceNetworkDelegate::OnConnectedRequestHeaders(
++    net::URLRequest* request,
++    net::HttpRequestHeaders* headers) {
++  DCHECK(request);
++  DCHECK(headers);
++
++  std::optional<std::string> freshness_cursor =
++      BuildFreshnessCursorForRequest(network_context_, request);
++
++  if (!freshness_cursor) {
++    return;
++  }
++
++  headers->SetHeader(freshness::wire::kRequestCursorHeaderName,
++                     *freshness_cursor);
++
++  LOG(ERROR) << "DNS_FRESHNESS_NATIVE CURSOR_WIRE=PASS"
++             << " HOST=" << request->url().host()
++             << " BYTES=" << freshness_cursor->size();
++}
++
+ int NetworkServiceNetworkDelegate::OnBeforeStartTransaction(
+     net::URLRequest* request,
+     const net::HttpRequestHeaders& headers,
+     OnBeforeStartTransactionCallback callback) {
+   URLLoader* url_loader = URLLoader::ForRequest(*request);
+-  if (url_loader)
+-    return url_loader->OnBeforeStartTransaction(headers, std::move(callback));
++  if (url_loader) {
++    std::optional<std::string> freshness_cursor =
++        BuildFreshnessCursorForRequest(network_context_, request);
++    return url_loader->OnBeforeStartTransaction(
++        headers, std::move(callback), std::move(freshness_cursor));
++  }
+ 
+ #if BUILDFLAG(ENABLE_WEBSOCKETS)
+   WebSocket* web_socket = WebSocket::ForRequest(*request);
+@@ -130,6 +215,13 @@ int NetworkServiceNetworkDelegate::OnHeadersReceived(
+     std::optional<GURL>* preserve_fragment_on_redirect_url,
+     const std::optional<net::SSLInfo>& ssl_info) {
+   auto chain = base::MakeRefCounted<PendingCallbackChain>(std::move(callback));
++
++  // Opportunistic DNS Freshness prototype. This is synchronous and performs
++  // no network transaction of its own.
++  freshness::ProcessFreshnessResponse(
++      request, original_response_headers, endpoint,
++      network_context_->freshness_state_store());
++
+   URLLoader* url_loader = URLLoader::ForRequest(*request);
+ 
+   if (url_loader) {
+@@ -155,6 +247,45 @@ int NetworkServiceNetworkDelegate::OnHeadersReceived(
+   return chain->GetResult();
+ }
+ 
++void NetworkServiceNetworkDelegate::
++    OnResolvedConnectionEndpointMetadata(
++        const std::string& hostname,
++        const net::NetworkAnonymizationKey& network_anonymization_key,
++        const std::vector<net::ConnectionEndpointMetadata>& metadatas) {
++  LOG(ERROR) << "DNS_FRESHNESS_NATIVE METADATA_BRIDGE"
++             << " HOST=" << hostname
++             << " COUNT=" << metadatas.size();
++
++  const std::vector<uint8_t>* discovery = nullptr;
++
++  for (const auto& metadata : metadatas) {
++    if (metadata.dns_freshness_discovery.empty()) {
++      continue;
++    }
++
++    if (!discovery) {
++      discovery = &metadata.dns_freshness_discovery;
++      continue;
++    }
++
++    if (*discovery != metadata.dns_freshness_discovery) {
++      LOG(ERROR)
++          << "DNS_FRESHNESS_NATIVE DISCOVERY_REJECT=CONFLICTING_SVCB";
++      return;
++    }
++  }
++
++  if (!discovery) {
++    return;
++  }
++
++  freshness::ProcessDnssecFreshnessDiscovery(
++      hostname,
++      network_anonymization_key,
++      *discovery,
++      network_context_->freshness_state_store());
++}
++
+ void NetworkServiceNetworkDelegate::OnBeforeRedirect(net::URLRequest* request,
+                                                      const GURL& new_location) {
+   if (network_context_->domain_reliability_monitor())
+diff --git a/services/network/network_service_network_delegate.h b/services/network/network_service_network_delegate.h
+index d628564204..4f06abd311 100644
+--- a/services/network/network_service_network_delegate.h
++++ b/services/network/network_service_network_delegate.h
+@@ -53,6 +53,10 @@ class COMPONENT_EXPORT(NETWORK_SERVICE) NetworkServiceNetworkDelegate
+   int OnBeforeURLRequest(net::URLRequest* request,
+                          net::CompletionOnceCallback callback,
+                          GURL* new_url) override;
++  void OnConnectedRequestHeaders(
++      net::URLRequest* request,
++      net::HttpRequestHeaders* headers) override;
++
+   int OnBeforeStartTransaction(
+       net::URLRequest* request,
+       const net::HttpRequestHeaders& headers,
+@@ -71,6 +75,11 @@ class COMPONENT_EXPORT(NETWORK_SERVICE) NetworkServiceNetworkDelegate
+   void OnCompleted(net::URLRequest* request,
+                    bool started,
+                    int net_error) override;
++  void OnResolvedConnectionEndpointMetadata(
++      const std::string& hostname,
++      const net::NetworkAnonymizationKey& network_anonymization_key,
++      const std::vector<net::ConnectionEndpointMetadata>& metadatas) override;
++
+   void OnPACScriptError(int line_number, const std::u16string& error) override;
+   std::optional<net::cookie_util::StorageAccessStatus> OnGetStorageAccessStatus(
+       const net::URLRequest& request,
+diff --git a/services/network/url_loader.cc b/services/network/url_loader.cc
+index 98f6f203cd..11d26036b1 100644
+--- a/services/network/url_loader.cc
++++ b/services/network/url_loader.cc
+@@ -89,6 +89,7 @@
+ #include "services/network/cookie_settings.h"
+ #include "services/network/devtools_durable_msg_writer.h"
+ #include "services/network/file_opener_for_upload.h"
++#include "services/network/freshness/freshness_wire_profile.h"
+ #include "services/network/orb/orb_impl.h"
+ #include "services/network/pervasive_resources/shared_resource_checker.h"
+ #include "services/network/public/cpp/client_hints.h"
+@@ -1845,7 +1846,8 @@ void URLLoader::OnReadCompleted(net::URLRequest* url_request, int bytes_read) {
+ 
+ int URLLoader::OnBeforeStartTransaction(
+     const net::HttpRequestHeaders& headers,
+-    net::NetworkDelegate::OnBeforeStartTransactionCallback callback) {
++    net::NetworkDelegate::OnBeforeStartTransactionCallback callback,
++    std::optional<std::string> freshness_cursor) {
+   const net::HttpRequestHeaders* used_headers = &headers;
+   net::HttpRequestHeaders headers_with_bonus_cookies;
+   if (!cookies_from_browser_.empty()) {
+@@ -1867,7 +1869,8 @@ int URLLoader::OnBeforeStartTransaction(
+     header_client_->OnBeforeSendHeaders(
+         url_request_->url(), *used_headers,
+         base::BindOnce(&URLLoader::OnBeforeSendHeadersComplete,
+-                       weak_ptr_factory_.GetWeakPtr(), std::move(callback)));
++                       weak_ptr_factory_.GetWeakPtr(), std::move(callback),
++                       *used_headers, std::move(freshness_cursor)));
+     return net::ERR_IO_PENDING;
+   }
+ 
+@@ -1875,6 +1878,11 @@ int URLLoader::OnBeforeStartTransaction(
+   // be invoked to ensure that the cookies are included in the request.
+   if (!cookies_from_browser_.empty()) {
+     CHECK_EQ(used_headers, &headers_with_bonus_cookies);
++    if (freshness_cursor) {
++      headers_with_bonus_cookies.SetHeader(
++          freshness::wire::kRequestCursorHeaderName,
++          std::move(*freshness_cursor));
++    }
+     TaskRunner(url_request_->priority())
+         ->PostTask(FROM_HERE,
+                    base::BindOnce(std::move(callback), net::OK,
+@@ -1882,6 +1890,21 @@ int URLLoader::OnBeforeStartTransaction(
+     return net::ERR_IO_PENDING;
+   }
+ 
++  // With no HeaderClient and no browser-added cookies, Chromium would normally
++  // continue synchronously. A Freshness cursor is itself a header mutation, so
++  // use the existing asynchronous callback contract to return the final set.
++  if (freshness_cursor) {
++    net::HttpRequestHeaders headers_with_freshness = headers;
++    headers_with_freshness.SetHeader(
++        freshness::wire::kRequestCursorHeaderName,
++        std::move(*freshness_cursor));
++    TaskRunner(url_request_->priority())
++        ->PostTask(FROM_HERE,
++                   base::BindOnce(std::move(callback), net::OK,
++                                  std::move(headers_with_freshness)));
++    return net::ERR_IO_PENDING;
++  }
++
+   return net::OK;
+ }
+ 
+@@ -2395,6 +2418,8 @@ void URLLoader::ResumeStart() {
+ 
+ void URLLoader::OnBeforeSendHeadersComplete(
+     net::NetworkDelegate::OnBeforeStartTransactionCallback callback,
++    net::HttpRequestHeaders headers_before_client,
++    std::optional<std::string> freshness_cursor,
+     int result,
+     const std::optional<net::HttpRequestHeaders>& headers,
+     std::optional<base::DictValue> extended_net_log_events) {
+@@ -2416,7 +2441,21 @@ void URLLoader::OnBeforeSendHeadersComplete(
+           return extended_net_log_events->Clone();
+         });
+   }
+-  std::move(callback).Run(result, headers);
++
++  if (result != net::OK || !freshness_cursor) {
++    std::move(callback).Run(result, headers);
++    return;
++  }
++
++  // A TrustedHeaderClient may return nullopt to mean "unchanged". In that
++  // case, preserve the exact headers it was given (including browser-added
++  // cookies), then append the Freshness cursor. If it returned modified
++  // headers, append Freshness to that final set instead.
++  net::HttpRequestHeaders final_headers =
++      headers ? *headers : std::move(headers_before_client);
++  final_headers.SetHeader(freshness::wire::kRequestCursorHeaderName,
++                          std::move(*freshness_cursor));
++  std::move(callback).Run(result, std::move(final_headers));
+ }
+ 
+ void URLLoader::OnHeadersReceivedComplete(
+diff --git a/services/network/url_loader.h b/services/network/url_loader.h
+index b8698a0fd9..9a7924392c 100644
+--- a/services/network/url_loader.h
++++ b/services/network/url_loader.h
+@@ -226,7 +226,8 @@ class COMPONENT_EXPORT(NETWORK_SERVICE) URLLoader
+   // the |header_client_|.
+   int OnBeforeStartTransaction(
+       const net::HttpRequestHeaders& headers,
+-      net::NetworkDelegate::OnBeforeStartTransactionCallback callback);
++      net::NetworkDelegate::OnBeforeStartTransactionCallback callback,
++      std::optional<std::string> freshness_cursor);
+   int OnHeadersReceived(
+       net::CompletionOnceCallback callback,
+       const net::HttpResponseHeaders* original_response_headers,
+@@ -479,6 +480,8 @@ class COMPONENT_EXPORT(NETWORK_SERVICE) URLLoader
+   void ResumeStart();
+   void OnBeforeSendHeadersComplete(
+       net::NetworkDelegate::OnBeforeStartTransactionCallback callback,
++      net::HttpRequestHeaders headers_before_client,
++      std::optional<std::string> freshness_cursor,
+       int result,
+       const std::optional<net::HttpRequestHeaders>& headers,
+       std::optional<base::DictValue> extended_net_log_events);

@@ -1,0 +1,29 @@
+ M chrome/browser/net/stub_resolver_config_reader.cc
+ M net/base/connection_endpoint_metadata.cc
+ M net/base/connection_endpoint_metadata.h
+ M net/base/network_delegate.h
+ M net/dns/dns_query.cc
+ M net/dns/dns_response_result_extractor.cc
+ M net/dns/dns_response_result_extractor.h
+ M net/dns/host_cache.cc
+ M net/dns/host_cache.h
+ M net/dns/host_resolver_dns_task.cc
+ M net/dns/host_resolver_manager_request_impl.cc
+ M net/dns/host_resolver_manager_service_endpoint_request_impl.cc
+ M net/dns/host_resolver_manager_service_endpoint_request_impl.h
+ M net/dns/https_record_rdata.cc
+ M net/dns/https_record_rdata.h
+ M net/dns/public/dns_protocol.h
+ M net/http/http_cache_transaction.cc
+ M net/http/http_cache_transaction.h
+ M net/shared_dictionary/shared_dictionary_network_transaction.cc
+ M net/shared_dictionary/shared_dictionary_network_transaction.h
+ M net/url_request/url_request_http_job.cc
+ M services/network/BUILD.gn
+ M services/network/network_context.h
+ M services/network/network_service_network_delegate.cc
+ M services/network/network_service_network_delegate.h
+ M services/network/url_loader.cc
+ M services/network/url_loader.h
+?? services/network/freshness/
+?? third_party/llvm-libclang/

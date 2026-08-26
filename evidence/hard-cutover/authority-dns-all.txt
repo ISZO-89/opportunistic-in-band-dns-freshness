@@ -1,0 +1,6 @@
+reading from file /mnt/user/appdata/dns-service-sync-lab/benchmark/results/browser-zero-dns-cutover/20260825T052433Z/authority-dns.pcap, link-type LINUX_SLL2 (Linux cooked v2), snapshot length 262144
+Warning: interface names might be incorrect
+05:24:42.987116 enp1s0 In  IP (tos 0x0, ttl 64, id 45414, offset 0, flags [none], proto UDP (17), length 83)
+    172.18.0.1.52873 > 172.18.0.54.53: [bad udp cksum 0x58ac -> 0x78b5!] 19709+ [1au] A? b.service.test. ar: . OPT UDPsize=1232 [COOKIE a7a4b4fe15130a1e] (55)
+05:24:42.987268 enp1s0 Out IP (tos 0x0, ttl 64, id 20361, offset 0, flags [DF], proto UDP (17), length 154)
+    172.18.0.54.53 > 172.18.0.1.52873: [bad udp cksum 0x58f3 -> 0x55fc!] 19709*- q: A? b.service.test. 1/1/1 b.service.test. A 172.18.0.12 ns: service.test. NS ns.service.test. ar: . OPT UDPsize=1232 [COOKIE a7a4b4fe15130a1e] (126)

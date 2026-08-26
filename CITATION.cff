@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+message: "If you use or discuss this research, please cite it using the metadata below."
+title: "Opportunistic In-Band DNS Freshness: DNSSEC-Rooted Reconciliation of Active DNS-Derived Service State over Natural Application Traffic"
+type: software
+version: "0.1.0"
+date-released: 2026-08-26
+authors:
+  - family-names: Fronemann
+    given-names: Marc Nicolai
+abstract: >-
+  Experimental DNS freshness architecture and Chromium proof of concept in which
+  DNSSEC-authorized, incrementally versioned DNS-derived service state is
+  reconciled over natural application traffic. DNS remains responsible for
+  bootstrap, root trust, recovery, and fallback.
+keywords:
+  - DNS
+  - DNSSEC
+  - HTTP/3
+  - QUIC
+  - Chromium
+  - cache freshness
+  - state reconciliation
+  - distributed systems

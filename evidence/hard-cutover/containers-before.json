@@ -1,0 +1,656 @@
+[
+    {
+        "Id": "c59108ae580de0271dc3fa447b11c9aa190fbe21c355a2d9a3732fba57f517bb",
+        "Created": "2026-08-24T13:12:31.146342694Z",
+        "Path": "/coredns",
+        "Args": [
+            "-conf",
+            "/config/Corefile"
+        ],
+        "State": {
+            "Status": "running",
+            "Running": true,
+            "Paused": false,
+            "Restarting": false,
+            "OOMKilled": false,
+            "Dead": false,
+            "Pid": 1644,
+            "ExitCode": 0,
+            "Error": "",
+            "StartedAt": "2026-08-25T04:33:58.709877363Z",
+            "FinishedAt": "2026-08-24T20:00:23.585346513Z"
+        },
+        "Image": "sha256:675b7399a7d4e0da56d077dfc90dabbab539b6df1ecc5c3e711a6df53061807c",
+        "ResolvConfPath": "/var/lib/docker/containers/c59108ae580de0271dc3fa447b11c9aa190fbe21c355a2d9a3732fba57f517bb/resolv.conf",
+        "HostnamePath": "/var/lib/docker/containers/c59108ae580de0271dc3fa447b11c9aa190fbe21c355a2d9a3732fba57f517bb/hostname",
+        "HostsPath": "/var/lib/docker/containers/c59108ae580de0271dc3fa447b11c9aa190fbe21c355a2d9a3732fba57f517bb/hosts",
+        "LogPath": "/var/lib/docker/containers/c59108ae580de0271dc3fa447b11c9aa190fbe21c355a2d9a3732fba57f517bb/c59108ae580de0271dc3fa447b11c9aa190fbe21c355a2d9a3732fba57f517bb-json.log",
+        "Name": "/dns-fullstack-auth",
+        "RestartCount": 0,
+        "Driver": "overlayfs",
+        "Platform": "linux",
+        "MountLabel": "",
+        "ProcessLabel": "",
+        "AppArmorProfile": "docker-default",
+        "ExecIDs": null,
+        "HostConfig": {
+            "Binds": [
+                "/mnt/user/appdata/dns-service-sync-lab/benchmark/fullstack-discovery:/config:ro"
+            ],
+            "ContainerIDFile": "",
+            "LogConfig": {
+                "Type": "json-file",
+                "Config": {}
+            },
+            "NetworkMode": "dns-service-sync-net",
+            "PortBindings": {},
+            "RestartPolicy": {
+                "Name": "no",
+                "MaximumRetryCount": 0
+            },
+            "AutoRemove": false,
+            "VolumeDriver": "",
+            "VolumesFrom": null,
+            "ConsoleSize": [
+                0,
+                0
+            ],
+            "CapAdd": null,
+            "CapDrop": null,
+            "CgroupnsMode": "private",
+            "Dns": [],
+            "DnsOptions": [],
+            "DnsSearch": [],
+            "ExtraHosts": null,
+            "GroupAdd": null,
+            "IpcMode": "private",
+            "Cgroup": "",
+            "Links": null,
+            "OomScoreAdj": 0,
+            "PidMode": "",
+            "Privileged": false,
+            "PublishAllPorts": false,
+            "ReadonlyRootfs": false,
+            "SecurityOpt": null,
+            "UTSMode": "",
+            "UsernsMode": "",
+            "ShmSize": 67108864,
+            "Runtime": "runc",
+            "Isolation": "",
+            "CpuShares": 0,
+            "Memory": 0,
+            "NanoCpus": 0,
+            "CgroupParent": "",
+            "BlkioWeight": 0,
+            "BlkioWeightDevice": [],
+            "BlkioDeviceReadBps": [],
+            "BlkioDeviceWriteBps": [],
+            "BlkioDeviceReadIOps": [],
+            "BlkioDeviceWriteIOps": [],
+            "CpuPeriod": 0,
+            "CpuQuota": 0,
+            "CpuRealtimePeriod": 0,
+            "CpuRealtimeRuntime": 0,
+            "CpusetCpus": "",
+            "CpusetMems": "",
+            "Devices": [],
+            "DeviceCgroupRules": null,
+            "DeviceRequests": null,
+            "MemoryReservation": 0,
+            "MemorySwap": 0,
+            "MemorySwappiness": null,
+            "OomKillDisable": null,
+            "PidsLimit": null,
+            "Ulimits": [],
+            "CpuCount": 0,
+            "CpuPercent": 0,
+            "IOMaximumIOps": 0,
+            "IOMaximumBandwidth": 0,
+            "MaskedPaths": [
+                "/proc/acpi",
+                "/proc/asound",
+                "/proc/interrupts",
+                "/proc/kcore",
+                "/proc/keys",
+                "/proc/latency_stats",
+                "/proc/sched_debug",
+                "/proc/scsi",
+                "/proc/timer_list",
+                "/proc/timer_stats",
+                "/sys/devices/virtual/powercap",
+                "/sys/firmware"
+            ],
+            "ReadonlyPaths": [
+                "/proc/bus",
+                "/proc/fs",
+                "/proc/irq",
+                "/proc/sys",
+                "/proc/sysrq-trigger"
+            ]
+        },
+        "Storage": {
+            "RootFS": {
+                "Snapshot": {
+                    "Name": "overlayfs"
+                }
+            }
+        },
+        "Mounts": [
+            {
+                "Type": "bind",
+                "Source": "/mnt/user/appdata/dns-service-sync-lab/benchmark/fullstack-discovery",
+                "Destination": "/config",
+                "Mode": "ro",
+                "RW": false,
+                "Propagation": "rprivate"
+            }
+        ],
+        "Config": {
+            "Hostname": "c59108ae580d",
+            "Domainname": "",
+            "User": "65532:65532",
+            "AttachStdin": false,
+            "AttachStdout": false,
+            "AttachStderr": false,
+            "ExposedPorts": {
+                "53/tcp": {},
+                "53/udp": {}
+            },
+            "Tty": false,
+            "OpenStdin": false,
+            "StdinOnce": false,
+            "Env": [
+                "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                "SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt"
+            ],
+            "Cmd": [
+                "-conf",
+                "/config/Corefile"
+            ],
+            "Image": "coredns/coredns:latest",
+            "Volumes": null,
+            "WorkingDir": "/",
+            "Entrypoint": [
+                "/coredns"
+            ],
+            "Labels": {}
+        },
+        "NetworkSettings": {
+            "SandboxID": "2f0da9159b410390c90e345bea4771bb78fed5d7f06cdea381cd4fe3455c4755",
+            "SandboxKey": "/var/run/docker/netns/2f0da9159b41",
+            "Ports": {
+                "53/tcp": null,
+                "53/udp": null
+            },
+            "Networks": {
+                "dns-service-sync-net": {
+                    "IPAMConfig": {
+                        "IPv4Address": "172.18.0.54"
+                    },
+                    "Links": null,
+                    "Aliases": null,
+                    "DriverOpts": null,
+                    "GwPriority": 0,
+                    "NetworkID": "f9adfa46ee0718571ad35c10a3aed4b0d39cc2ee38b422456b95c78920ed6de3",
+                    "EndpointID": "7182b8a82415390622ebea77caeda3a1a79640db6919f03bf19c795c9952ad92",
+                    "Gateway": "172.18.0.1",
+                    "IPAddress": "172.18.0.54",
+                    "MacAddress": "0a:3b:ab:18:a0:42",
+                    "IPPrefixLen": 16,
+                    "IPv6Gateway": "",
+                    "GlobalIPv6Address": "",
+                    "GlobalIPv6PrefixLen": 0,
+                    "DNSNames": [
+                        "dns-fullstack-auth",
+                        "c59108ae580d"
+                    ]
+                }
+            }
+        },
+        "ImageManifestDescriptor": {
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "digest": "sha256:675b7399a7d4e0da56d077dfc90dabbab539b6df1ecc5c3e711a6df53061807c",
+            "size": 2212,
+            "annotations": {
+                "io.containerd.image.name": "docker.io/coredns/coredns:latest",
+                "org.opencontainers.image.ref.name": "latest"
+            },
+            "platform": {
+                "architecture": "amd64",
+                "os": "linux"
+            }
+        }
+    },
+    {
+        "Id": "5abdd5271a5f56a8da6fdf2e41c760b36ba106fa855593e4b9d0caa095cef697",
+        "Created": "2026-08-24T13:18:07.74905171Z",
+        "Path": "unbound",
+        "Args": [
+            "-d",
+            "-c",
+            "/config/unbound.conf"
+        ],
+        "State": {
+            "Status": "running",
+            "Running": true,
+            "Paused": false,
+            "Restarting": false,
+            "OOMKilled": false,
+            "Dead": false,
+            "Pid": 1733,
+            "ExitCode": 0,
+            "Error": "",
+            "StartedAt": "2026-08-25T04:33:59.063196595Z",
+            "FinishedAt": "2026-08-24T20:00:23.58708133Z"
+        },
+        "Image": "sha256:5ffa341893d42035079f5e567f986b1b75b7613bf89aabbe7960ee07aec6e90d",
+        "ResolvConfPath": "/var/lib/docker/containers/5abdd5271a5f56a8da6fdf2e41c760b36ba106fa855593e4b9d0caa095cef697/resolv.conf",
+        "HostnamePath": "/var/lib/docker/containers/5abdd5271a5f56a8da6fdf2e41c760b36ba106fa855593e4b9d0caa095cef697/hostname",
+        "HostsPath": "/var/lib/docker/containers/5abdd5271a5f56a8da6fdf2e41c760b36ba106fa855593e4b9d0caa095cef697/hosts",
+        "LogPath": "/var/lib/docker/containers/5abdd5271a5f56a8da6fdf2e41c760b36ba106fa855593e4b9d0caa095cef697/5abdd5271a5f56a8da6fdf2e41c760b36ba106fa855593e4b9d0caa095cef697-json.log",
+        "Name": "/dns-fullstack-doh",
+        "RestartCount": 0,
+        "Driver": "overlayfs",
+        "Platform": "linux",
+        "MountLabel": "",
+        "ProcessLabel": "",
+        "AppArmorProfile": "docker-default",
+        "ExecIDs": null,
+        "HostConfig": {
+            "Binds": [
+                "/mnt/user/appdata/dns-service-sync-lab/benchmark/fullstack-discovery:/config:ro"
+            ],
+            "ContainerIDFile": "",
+            "LogConfig": {
+                "Type": "json-file",
+                "Config": {}
+            },
+            "NetworkMode": "dns-service-sync-net",
+            "PortBindings": {},
+            "RestartPolicy": {
+                "Name": "no",
+                "MaximumRetryCount": 0
+            },
+            "AutoRemove": false,
+            "VolumeDriver": "",
+            "VolumesFrom": null,
+            "ConsoleSize": [
+                0,
+                0
+            ],
+            "CapAdd": null,
+            "CapDrop": null,
+            "CgroupnsMode": "private",
+            "Dns": [],
+            "DnsOptions": [],
+            "DnsSearch": [],
+            "ExtraHosts": null,
+            "GroupAdd": null,
+            "IpcMode": "private",
+            "Cgroup": "",
+            "Links": null,
+            "OomScoreAdj": 0,
+            "PidMode": "",
+            "Privileged": false,
+            "PublishAllPorts": false,
+            "ReadonlyRootfs": false,
+            "SecurityOpt": null,
+            "UTSMode": "",
+            "UsernsMode": "",
+            "ShmSize": 67108864,
+            "Runtime": "runc",
+            "Isolation": "",
+            "CpuShares": 0,
+            "Memory": 0,
+            "NanoCpus": 0,
+            "CgroupParent": "",
+            "BlkioWeight": 0,
+            "BlkioWeightDevice": [],
+            "BlkioDeviceReadBps": [],
+            "BlkioDeviceWriteBps": [],
+            "BlkioDeviceReadIOps": [],
+            "BlkioDeviceWriteIOps": [],
+            "CpuPeriod": 0,
+            "CpuQuota": 0,
+            "CpuRealtimePeriod": 0,
+            "CpuRealtimeRuntime": 0,
+            "CpusetCpus": "",
+            "CpusetMems": "",
+            "Devices": [],
+            "DeviceCgroupRules": null,
+            "DeviceRequests": null,
+            "MemoryReservation": 0,
+            "MemorySwap": 0,
+            "MemorySwappiness": null,
+            "OomKillDisable": null,
+            "PidsLimit": null,
+            "Ulimits": [],
+            "CpuCount": 0,
+            "CpuPercent": 0,
+            "IOMaximumIOps": 0,
+            "IOMaximumBandwidth": 0,
+            "MaskedPaths": [
+                "/proc/acpi",
+                "/proc/asound",
+                "/proc/interrupts",
+                "/proc/kcore",
+                "/proc/keys",
+                "/proc/latency_stats",
+                "/proc/sched_debug",
+                "/proc/scsi",
+                "/proc/timer_list",
+                "/proc/timer_stats",
+                "/sys/devices/virtual/powercap",
+                "/sys/firmware"
+            ],
+            "ReadonlyPaths": [
+                "/proc/bus",
+                "/proc/fs",
+                "/proc/irq",
+                "/proc/sys",
+                "/proc/sysrq-trigger"
+            ]
+        },
+        "Storage": {
+            "RootFS": {
+                "Snapshot": {
+                    "Name": "overlayfs"
+                }
+            }
+        },
+        "Mounts": [
+            {
+                "Type": "bind",
+                "Source": "/mnt/user/appdata/dns-service-sync-lab/benchmark/fullstack-discovery",
+                "Destination": "/config",
+                "Mode": "ro",
+                "RW": false,
+                "Propagation": "rprivate"
+            }
+        ],
+        "Config": {
+            "Hostname": "5abdd5271a5f",
+            "Domainname": "",
+            "User": "",
+            "AttachStdin": false,
+            "AttachStdout": false,
+            "AttachStderr": false,
+            "Tty": false,
+            "OpenStdin": false,
+            "StdinOnce": false,
+            "Env": [
+                "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+            ],
+            "Cmd": [
+                "unbound",
+                "-d",
+                "-c",
+                "/config/unbound.conf"
+            ],
+            "Image": "dns-service-sync-realclassic-unbound:lab",
+            "Volumes": null,
+            "WorkingDir": "/",
+            "Entrypoint": null,
+            "Labels": {}
+        },
+        "NetworkSettings": {
+            "SandboxID": "92214fd8411e89540c6da247641fee6c52606dba6062636d5d10423b799ac5c4",
+            "SandboxKey": "/var/run/docker/netns/92214fd8411e",
+            "Ports": {},
+            "Networks": {
+                "dns-service-sync-net": {
+                    "IPAMConfig": {
+                        "IPv4Address": "172.18.0.55"
+                    },
+                    "Links": null,
+                    "Aliases": null,
+                    "DriverOpts": null,
+                    "GwPriority": 0,
+                    "NetworkID": "f9adfa46ee0718571ad35c10a3aed4b0d39cc2ee38b422456b95c78920ed6de3",
+                    "EndpointID": "403a8f5251727df74c700201b7f698b845d593e65c22a5e2ea631dbb3e7965c0",
+                    "Gateway": "172.18.0.1",
+                    "IPAddress": "172.18.0.55",
+                    "MacAddress": "32:8f:b0:dd:e6:9b",
+                    "IPPrefixLen": 16,
+                    "IPv6Gateway": "",
+                    "GlobalIPv6Address": "",
+                    "GlobalIPv6PrefixLen": 0,
+                    "DNSNames": [
+                        "dns-fullstack-doh",
+                        "5abdd5271a5f"
+                    ]
+                }
+            }
+        },
+        "ImageManifestDescriptor": {
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "digest": "sha256:e9044f30f360c88d90576a3824b63e9a9aabd04ac62daf480a7727366ea5c76a",
+            "size": 861,
+            "platform": {
+                "architecture": "amd64",
+                "os": "linux"
+            }
+        }
+    },
+    {
+        "Id": "85f2546e1485dd3df687edd1899f2e98f4218136c1b3d7f886d7319e02247697",
+        "Created": "2026-08-25T05:17:43.105399006Z",
+        "Path": "python",
+        "Args": [
+            "/work/native_browser_server.py"
+        ],
+        "State": {
+            "Status": "running",
+            "Running": true,
+            "Paused": false,
+            "Restarting": false,
+            "OOMKilled": false,
+            "Dead": false,
+            "Pid": 7739,
+            "ExitCode": 0,
+            "Error": "",
+            "StartedAt": "2026-08-25T05:22:21.494174773Z",
+            "FinishedAt": "2026-08-25T05:22:21.175835668Z"
+        },
+        "Image": "sha256:2472d55eed53ab68f7d72340e9adf67728180193fb64ab87fad3458c8486e4d0",
+        "ResolvConfPath": "/var/lib/docker/containers/85f2546e1485dd3df687edd1899f2e98f4218136c1b3d7f886d7319e02247697/resolv.conf",
+        "HostnamePath": "/var/lib/docker/containers/85f2546e1485dd3df687edd1899f2e98f4218136c1b3d7f886d7319e02247697/hostname",
+        "HostsPath": "/var/lib/docker/containers/85f2546e1485dd3df687edd1899f2e98f4218136c1b3d7f886d7319e02247697/hosts",
+        "LogPath": "/var/lib/docker/containers/85f2546e1485dd3df687edd1899f2e98f4218136c1b3d7f886d7319e02247697/85f2546e1485dd3df687edd1899f2e98f4218136c1b3d7f886d7319e02247697-json.log",
+        "Name": "/dns-fullstack-h3",
+        "RestartCount": 0,
+        "Driver": "overlayfs",
+        "Platform": "linux",
+        "MountLabel": "",
+        "ProcessLabel": "",
+        "AppArmorProfile": "docker-default",
+        "ExecIDs": null,
+        "HostConfig": {
+            "Binds": [
+                "/mnt/user/appdata/dns-service-sync-lab/benchmark/realworld-freshness:/work:ro",
+                "/mnt/user/appdata/dns-service-sync-lab/benchmark/gate18-http3/tls:/tls:ro"
+            ],
+            "ContainerIDFile": "",
+            "LogConfig": {
+                "Type": "json-file",
+                "Config": {}
+            },
+            "NetworkMode": "dns-service-sync-net",
+            "PortBindings": {},
+            "RestartPolicy": {
+                "Name": "no",
+                "MaximumRetryCount": 0
+            },
+            "AutoRemove": false,
+            "VolumeDriver": "",
+            "VolumesFrom": null,
+            "ConsoleSize": [
+                0,
+                0
+            ],
+            "CapAdd": null,
+            "CapDrop": null,
+            "CgroupnsMode": "private",
+            "Dns": null,
+            "DnsOptions": [],
+            "DnsSearch": [],
+            "ExtraHosts": null,
+            "GroupAdd": null,
+            "IpcMode": "private",
+            "Cgroup": "",
+            "Links": null,
+            "OomScoreAdj": 0,
+            "PidMode": "",
+            "Privileged": false,
+            "PublishAllPorts": false,
+            "ReadonlyRootfs": false,
+            "SecurityOpt": null,
+            "UTSMode": "",
+            "UsernsMode": "",
+            "ShmSize": 67108864,
+            "Runtime": "runc",
+            "Isolation": "",
+            "CpuShares": 0,
+            "Memory": 0,
+            "NanoCpus": 0,
+            "CgroupParent": "",
+            "BlkioWeight": 0,
+            "BlkioWeightDevice": [],
+            "BlkioDeviceReadBps": [],
+            "BlkioDeviceWriteBps": [],
+            "BlkioDeviceReadIOps": [],
+            "BlkioDeviceWriteIOps": [],
+            "CpuPeriod": 0,
+            "CpuQuota": 0,
+            "CpuRealtimePeriod": 0,
+            "CpuRealtimeRuntime": 0,
+            "CpusetCpus": "",
+            "CpusetMems": "",
+            "Devices": [],
+            "DeviceCgroupRules": null,
+            "DeviceRequests": null,
+            "MemoryReservation": 0,
+            "MemorySwap": 0,
+            "MemorySwappiness": null,
+            "OomKillDisable": null,
+            "PidsLimit": null,
+            "Ulimits": [],
+            "CpuCount": 0,
+            "CpuPercent": 0,
+            "IOMaximumIOps": 0,
+            "IOMaximumBandwidth": 0,
+            "MaskedPaths": [
+                "/proc/acpi",
+                "/proc/asound",
+                "/proc/interrupts",
+                "/proc/kcore",
+                "/proc/keys",
+                "/proc/latency_stats",
+                "/proc/sched_debug",
+                "/proc/scsi",
+                "/proc/timer_list",
+                "/proc/timer_stats",
+                "/sys/devices/virtual/powercap",
+                "/sys/firmware"
+            ],
+            "ReadonlyPaths": [
+                "/proc/bus",
+                "/proc/fs",
+                "/proc/irq",
+                "/proc/sys",
+                "/proc/sysrq-trigger"
+            ]
+        },
+        "Storage": {
+            "RootFS": {
+                "Snapshot": {
+                    "Name": "overlayfs"
+                }
+            }
+        },
+        "Mounts": [
+            {
+                "Type": "bind",
+                "Source": "/mnt/user/appdata/dns-service-sync-lab/benchmark/realworld-freshness",
+                "Destination": "/work",
+                "Mode": "ro",
+                "RW": false,
+                "Propagation": "rprivate"
+            },
+            {
+                "Type": "bind",
+                "Source": "/mnt/user/appdata/dns-service-sync-lab/benchmark/gate18-http3/tls",
+                "Destination": "/tls",
+                "Mode": "ro",
+                "RW": false,
+                "Propagation": "rprivate"
+            }
+        ],
+        "Config": {
+            "Hostname": "85f2546e1485",
+            "Domainname": "",
+            "User": "",
+            "AttachStdin": false,
+            "AttachStdout": false,
+            "AttachStderr": false,
+            "Tty": false,
+            "OpenStdin": false,
+            "StdinOnce": false,
+            "Env": [
+                "NATIVE_PHASE=pre",
+                "PATH=/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                "LANG=C.UTF-8",
+                "GPG_KEY=7169605F62C751356D054A26A821E680E5FA6305",
+                "PYTHON_VERSION=3.12.14",
+                "PYTHON_SHA256=5c8462af5790baf43a321a1559dbe0db06d1be4300fb85fb53c40060668e548a"
+            ],
+            "Cmd": [
+                "python",
+                "/work/native_browser_server.py"
+            ],
+            "Image": "dns-service-sync-realworld-h3:lab",
+            "Volumes": null,
+            "WorkingDir": "/work",
+            "Entrypoint": null,
+            "Labels": {}
+        },
+        "NetworkSettings": {
+            "SandboxID": "3a70334e1eb9fa0eb915719005e1cd597369cae90823f9545299969983f39854",
+            "SandboxKey": "/var/run/docker/netns/3a70334e1eb9",
+            "Ports": {},
+            "Networks": {
+                "dns-service-sync-net": {
+                    "IPAMConfig": {
+                        "IPv4Address": "172.18.0.61"
+                    },
+                    "Links": null,
+                    "Aliases": null,
+                    "DriverOpts": null,
+                    "GwPriority": 0,
+                    "NetworkID": "f9adfa46ee0718571ad35c10a3aed4b0d39cc2ee38b422456b95c78920ed6de3",
+                    "EndpointID": "8b2156ba8499915afd189859ea6ab51a4d082ae5b44dd9975880f7e5e06c738c",
+                    "Gateway": "172.18.0.1",
+                    "IPAddress": "172.18.0.61",
+                    "MacAddress": "fe:ac:25:3a:f0:7e",
+                    "IPPrefixLen": 16,
+                    "IPv6Gateway": "",
+                    "GlobalIPv6Address": "",
+                    "GlobalIPv6PrefixLen": 0,
+                    "DNSNames": [
+                        "dns-fullstack-h3",
+                        "85f2546e1485"
+                    ]
+                }
+            }
+        },
+        "ImageManifestDescriptor": {
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "digest": "sha256:2cfd9cad2b847e5631ee153314ec852ce347bfda1937e87256e7405f3c5afff0",
+            "size": 1435,
+            "platform": {
+                "architecture": "amd64",
+                "os": "linux"
+            }
+        }
+    }
+]

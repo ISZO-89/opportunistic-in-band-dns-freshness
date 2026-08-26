@@ -1,0 +1,17 @@
+utc=20260825T052433Z
+authority_ip=172.18.0.54
+doh_ip=172.18.0.55
+pre_endpoint=172.18.0.61
+post_endpoint=172.18.0.12
+h3_image=dns-service-sync-realworld-h3:lab
+browser_image=dns-service-sync-real-browser:lab
+h3_spki=NdxVLANqQ92KAB0XLPUtbP/X5h/SQXbJd46oMo8EBcs=
+doh_spki=b20c5FWqendhxrtGyB/k65HeF/WGiVc1TeC+Zi+kJbY=
+doh_mode=secure
+doh_template=https://172.18.0.55:8443/dns-query{?dns}
+chromium_commit=782af9cb30a53f54487e5d2e44738645a8ec457c
+chromium_version=Chromium 151.0.7922.34 
+h3_image_id=sha256:2472d55eed53ab68f7d72340e9adf67728180193fb64ab87fad3458c8486e4d0
+browser_image_id=sha256:36645cee8b5a6e3132c1c32920dd6dc25b9adfdf2839ac733e23b3ba392b83ea
+auth_image=coredns/coredns:latest
+doh_image=dns-service-sync-realclassic-unbound:lab
