@@ -1,13 +1,13 @@
 1d1807ff18404a3a0ae7748e340c517d5ed67aa51c27272305d67c355819d6e6  ./AUTHORS.md
 70c6073fc5123771127ddc2a1cc8c6707a687b5e395eddd91ae87b1abc1394ba  ./CITATION.cff
-884b0834c1d58467d31dd36e2b26274d926be343212b523443a24cff37636695  ./docs/diagrams/architecture.png
+10f29fd28b756d1f88241061af9ccf13a132ee78d837c6d928e99d651065d7bd  ./docs/diagrams/architecture.png
 26dafb089ee2d3b8dbc7a2833143dcca7b2e29bb69c1f8931b96e16b0f8dcc7e  ./docs/diagrams/gate3b-rtt.png
 1ef4245f1190c49a3870172287f41783126dba920553c4ccb9370311affe140c  ./docs/diagrams/hard-cutover.png
 e227f6943e02a6f6693b7b5253fefd248f148b8d49d01fe86dd7cf37b375286f  ./docs/evidence-freeze-v0.1-de.md
 c37761d9338b72dd483d925d850dd28cb9cdd4866089aa7269e25cd9f3d97b02  ./docs/freeze-manifest-v0.1.json
 d7e0f97ae530d01eed896c27afec22edb299b031dc2f408abb3817698e687af6  ./docs/protocol-spec.md
-cb55b1815fecf7c9c244425a3d53b768c0b9985a2ad279ab3dae0867e18fc218  ./docs/technical-report.docx
-dcc2f82765dc4429ee3c8e082fe8b32e27b2047795204ed16eebfa28a6559dbc  ./docs/technical-report.pdf
+2241f52a1508e6786d66f4692ab3b30d4000d807fffaa0f7a8367d7a44d2f762  ./docs/technical-report.docx
+4d63cc208ef4685a925c9fc47f939e03ac1b20bac012403bc54c3741ec1b304c  ./docs/technical-report.pdf
 664e0bd07cde2c738fbcfdaa6a7293e791abeec1274491d7fe99df3550c2eb40  ./evidence/browser-freshness-100/fullstack-vectors.json
 83ef7fa7570446ef2400cccc356d14be14539497aafc6f9dc40a0bf0eb02847b  ./evidence/browser-freshness-100/native_browser_server.py
 5f92eda5e7a16faf832d9e3853f69b77045c2f6e0c142f2938f62e7229450b57  ./evidence/browser-freshness-100/RESULT.txt
