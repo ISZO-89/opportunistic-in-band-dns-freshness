@@ -20,6 +20,13 @@ Classic DNS freshness is primarily timer-driven. DNS Push can provide asynchrono
 
 The application path is the **carrier**, not the source of authority.
 
+
+### TTL and connection-lifetime clarification
+
+**After successful Freshness admission, the original DNS TTL is no longer the recurring freshness timer for that admitted state.** A verified signed `Snapshot`, `Delta`, or `Checkpoint` is a new Authority-authorized freshness statement with its own bounded validity interval. While that Freshness validity remains active, the admitted state may remain usable even if the TTL from the original DNS bootstrap would otherwise have expired. When the Freshness validity expires, conventional DNS/cache policy resumes authority.
+
+The mechanism is also **not tied to keeping one particular HTTP/2 or HTTP/3 transport connection alive**. Its intended condition is broader: the service remains actively used and at least one authorized application path survives long enough for a natural request/response exchange to carry a newer signed state. If no authorized path survives, or trust/ancestry/lease validity is lost, the client returns to DNS.
+
 ![Architecture](docs/diagrams/architecture.png)
 
 ## What is actually new here?
