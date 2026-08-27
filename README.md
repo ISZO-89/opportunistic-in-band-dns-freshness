@@ -1,5 +1,7 @@
 # Opportunistic In-Band DNS Freshness
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22120931.svg)](https://doi.org/10.5281/zenodo.22120931)
+
 **Experimental DNS freshness protocol: DNSSEC-authorized, versioned reconciliation of DNS-derived service state over existing application traffic, without a dedicated update channel.**
 
 This repository publishes a protocol design, a patched Chromium proof of concept, frozen experimental evidence, deterministic test vectors, and clean reconstruction helpers so that other networking engineers can reproduce the result, stress the assumptions, and try to break the design.
