@@ -8,6 +8,7 @@ The highest-value next step is independent validation, not additional local happ
 2. Repeat the core mechanism on Firefox/Necko, WebKit/NetworkProcess, or another independent browser/resolver stack.
 3. Exercise real CDN/edge topologies, reverse proxies, HTTP field normalization/stripping, WAFs, service meshes, and anycast.
 4. Test QUIC migration, 0-RTT, connection coalescing, Alt-Svc changes, concurrent H2/H3 streams, and response reordering.
+   - **Local post-v0.1 result (2026-08-27):** a controlled Chromium/H3 Alt-Svc reordering test observed a later-arriving test-designated older advertisement replacing a previously learned newer alternative. A companion native Chromium Freshness test committed Gen101 and then rejected a replayed Gen100->Gen101 Delta with `STALE_DELTA=IGNORE LOCAL_GEN=101 FROM_GEN=100`. External reproduction is still required; see `docs/altsvc-reordering-falsification-2026-08-27.md`.
 5. Measure large working sets, scope churn, history truncation, update storms, and bounded-resource behavior under adversarial inputs.
 6. Quantify the **hard-discontinuity rate and overlap window**: how often every previously authorized path disappears before a signed transition can be learned, versus rolling/draining/partial-change cases where at least one path survives long enough to reconcile state.
 7. Run direct end-to-end Classic DNS/TTL vs Freshness recovery experiments in a production-grade browser harness, including:

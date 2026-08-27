@@ -63,6 +63,34 @@ Supported claim:
 
 The observed post-cutover request time was 33.738 ms. That value is **not** a measured Classic-DNS-vs-Freshness latency delta.
 
+
+## Post-v0.1 Alt-Svc stale-state falsification result
+
+A follow-up Chromium/HTTP/3 falsification test on 27 August 2026 exercised stale-state handling against Alt-Svc and the Freshness implementation.
+
+**C1 — Chromium Alt-Svc response reordering**
+
+- a test-designated newer Alt-Svc advertisement for port `4555` was sent first;
+- a deliberately delayed older advertisement for port `4444` arrived later;
+- after both responses completed and a fresh routing decision was forced, the next probe used port `4444`;
+- the same outcome was observed twice in the local lab.
+
+**C2 — native Chromium Freshness stale replay**
+
+- Snapshot Gen100 was admitted;
+- Delta Gen100 -> Gen101 was verified and committed;
+- the older Gen100 -> Gen101 Delta was delivered again while local state was already Gen101;
+- Chromium logged `STALE_DELTA=IGNORE LOCAL_GEN=101 FROM_GEN=100` and preserved the committed newer state.
+
+Supported comparative claim:
+
+> In these controlled Chromium/HTTP/3 tests, Alt-Svc was observed to regress to a later-arriving stale alternative, while Opportunistic Freshness rejected stale generation ancestry and preserved the newer committed state.
+
+This is a **stale-state protection result**, not a claim of universal superiority, production prevalence, or Internet-scale behavior. See [the post-v0.1 falsification note](docs/altsvc-reordering-falsification-2026-08-27.md).
+
+Local freeze identifier: `20260827T055217Z`  
+Freeze root SHA-256: `caccf4d38bb4f2dac7d5e62db60c299314b6a08f902e18a262ac45044753f9dc`
+
 ## Performance evidence
 
 ### RTT experiment: marginal in-band work vs a separate DNS transaction
