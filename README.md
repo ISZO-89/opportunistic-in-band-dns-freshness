@@ -8,24 +8,98 @@ This repository publishes a protocol design, a patched Chromium proof of concept
 
 > **Status: experimental research / PoC, v0.1.0. Not a standard and not production-ready.**
 
+## Scope first: what v0.1 actually tests
+
+The v0.1 question is deliberately narrow:
+
+> **For a service that is already in active use, can a client keep DNS-derived service state currently authorized through successive signed assertions carried on natural application traffic, so that a topology change learned while at least one authorized path survives can be committed before an old path disappears?**
+
+That is the operating point demonstrated by v0.1. It is **not** a claim that DNS TTL disappears for every client state or that a client can remain silent indefinitely without any current authority.
+
+The important boundary is:
+
+- **ACTIVE client:** after Freshness admission, the original DNS RR TTL is no longer the recurring service-state freshness timer for the admitted state. Natural application exchanges can carry newer signed `Checkpoint`, `Delta`, or `Snapshot` assertions and thereby keep the state currently authorized.
+- **DORMANT client:** v0.1 does not preserve expired Freshness state as current authority across an arbitrarily long silent period. If the signed Freshness validity expires, conventional DNS/cache policy resumes authority.
+- **v0.2 successor work:** the next research step is to test whether expired but historically authenticated endpoint state can survive dormancy only as `PROBE_ONLY` reconnect information, then obtain a current independently authorized service-state assertion before normal application use. That broader TTL-displacement claim is **not part of the v0.1 evidence**.
+
 ## The idea
 
-Classic DNS freshness is primarily timer-driven. DNS Push can provide asynchronous updates, but requires a separate update relationship. This project explores a third operating point for **already-active services**:
+Classic DNS freshness is primarily timer-driven. DNS Push can provide asynchronous updates during application silence, but requires a separate update relationship. v0.1 explores a third operating point for **already-active services**:
 
 1. DNS/DNSSEC performs bootstrap, view admission, and root-of-trust establishment.
-2. The client maintains a bounded, versioned state for the active service/scope.
-3. Natural HTTP requests carry a compact cursor describing the client's current state.
+2. The client admits a bounded, versioned Freshness state for the active service/scope.
+3. Natural HTTP requests carry a compact cursor describing the client's currently admitted state.
 4. Natural HTTP responses may carry an independently verifiable, Authority-signed `Snapshot`, `Checkpoint`, `Delta`, or `ResyncRequired` object.
-5. If ancestry, trust, lease, or reachability assumptions fail, conventional DNS resumes authority.
+5. A verified `Checkpoint` can reaffirm the current state for a new bounded validity interval; a verified `Delta` can advance it to a new generation; a `Snapshot` can establish complete current state where admission/re-admission semantics permit it.
+6. As long as natural application traffic continues often enough to receive current signed assertions, the client can maintain a continuously authorized Freshness state even after the original DNS bootstrap TTL has expired.
+7. If ancestry, trust, Freshness validity, view, or reachability assumptions fail, conventional DNS resumes authority.
 
 The application path is the **carrier**, not the source of authority.
 
+### TTL, Freshness validity, and connection lifetime are three different things
 
-### TTL and connection-lifetime clarification
+#### 1. DNS RR TTL
 
-**After successful Freshness admission, the original DNS TTL is no longer the recurring freshness timer for that admitted state.** A verified signed `Snapshot`, `Delta`, or `Checkpoint` is a new Authority-authorized freshness statement with its own bounded validity interval. While that Freshness validity remains active, the admitted state may remain usable even if the TTL from the original DNS bootstrap would otherwise have expired. When the Freshness validity expires, conventional DNS/cache policy resumes authority.
+Before Freshness admission, ordinary DNS/cache TTL rules apply. After successful admission, the TTL attached to the original DNS bootstrap answer does **not** continue to act as the recurring freshness timer for the already-admitted Freshness state.
 
-The mechanism is also **not tied to keeping one particular HTTP/2 or HTTP/3 transport connection alive**. Its intended condition is broader: the service remains actively used and at least one authorized application path survives long enough for a natural request/response exchange to carry a newer signed state. If no authorized path survives, or trust/ancestry/lease validity is lost, the client returns to DNS.
+#### 2. Freshness validity
+
+A verified signed `Snapshot`, `Checkpoint`, or `Delta` is a new Authority-authorized statement with its own `issued_at` / `valid_until` interval. That interval is the relevant current-authorization bound for v0.1 Freshness-managed state.
+
+The interval does not extend by itself. The intended active-client behavior is that natural requests and responses keep providing newer valid assertions as needed. Therefore an active client can remain on a chain of current Authority assertions while the original DNS RR TTL expires in the background.
+
+If the Freshness validity expires before a newer valid assertion is admitted, v0.1 stops treating the state as current and returns to conventional DNS/cache policy.
+
+#### 3. HTTP/2 or HTTP/3 connection lifetime
+
+Freshness is not the lifetime of one particular transport connection. A single H2/H3 connection does not have to remain alive forever.
+
+For pre-failure convergence, what matters is that **at least one authorized application path remains usable long enough for a natural exchange to deliver the newer signed state**. Once that newer state is verified and committed, later connections may use the committed state even if the original DNS bootstrap TTL has already expired, provided the Freshness state itself is still currently authorized.
+
+A common misreading is therefore:
+
+1. one specific connection must stay established;
+2. an address change must happen during that exact connection;
+3. the reconnect must occur before the DNS TTL expires.
+
+That is **not** the v0.1 model. The correct model is:
+
+```text
+DNS/DNSSEC bootstrap
+    -> Freshness admission
+    -> ACTIVE service use
+    -> natural requests/responses carry current signed state
+    -> change arrives while at least one authorized path survives
+    -> newer generation is verified and committed
+    -> old path may disappear
+    -> later request/connection uses the committed current state
+```
+
+The reconnect is not bounded by the **original DNS TTL**. It is bounded by the currently accepted **Freshness authorization** and the other trust/view/reachability invariants.
+
+### Where v0.1 stops, and why v0.2 exists
+
+v0.1 answers the active-client question. It intentionally sends no Freshness-only traffic while the application is idle. That means a client that becomes dormant long enough for its Freshness assertion to expire falls back to DNS under v0.1.
+
+The successor v0.2 research target is broader:
+
+```text
+v0.1:
+ACTIVE + natural traffic
+    -> keep current signed service state
+    -> learn changes before surviving paths disappear
+
+v0.2 target:
+DORMANT
+    -> retain expired endpoint state only as historical PROBE_ONLY locator state
+    -> real demand returns
+    -> use a historical locator only to establish a safe carrier
+    -> obtain and verify CURRENT independently authorized service state
+    -> re-admit current state before normal application data is released
+    -> use DNS for trust/view/reachability/proof recovery when required
+```
+
+The v0.2 goal is to test whether participating services can displace DNS RR TTL from the recurring **service-state** re-resolution path across both active and dormant periods, without treating stale routing state or TLS success as current authority. It remains an unproven successor design until its own falsification gates pass.
 
 ![Architecture](docs/diagrams/architecture.png)
 
@@ -162,10 +236,11 @@ The last point is a hypothesis for external measurement, not a result already pr
 
 - **Cold start:** DNS remains the bootstrap path.
 - **No surviving authorized path:** DNS recovery is required.
-- **Application silence with an immediate update requirement:** DNS Push can serve an operating point this base design deliberately does not cover.
-- **Trust loss, lease expiry, fork, or unbridgeable history gap:** fail safe to DNS/re-admission.
+- **Application silence with an immediate update requirement:** DNS Push can serve an operating point v0.1 deliberately does not cover.
+- **Dormancy beyond Freshness validity in v0.1:** v0.1 returns to DNS; retaining expired state as `PROBE_ONLY` resume information is a v0.2 research target, not a v0.1 result.
+- **Trust loss, lease expiry, fork, or unbridgeable active-history gap:** fail safe to DNS/re-admission.
 
-This project does not claim that DNS is replaced or that TTLs disappear universally.
+v0.1 does not claim that DNS is replaced or that TTLs disappear universally. Its demonstrated claim is narrower: **for an already-active admitted service, current signed Freshness assertions can replace the original DNS RR TTL as the recurring service-state freshness mechanism while the active-path invariants continue to hold.**
 
 ## Repository map
 
